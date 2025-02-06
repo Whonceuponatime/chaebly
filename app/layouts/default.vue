@@ -5,8 +5,15 @@
         <NuxtLink to="/" class="logo">채블리</NuxtLink>
         <div class="nav-links">
           <NuxtLink to="/products">상품</NuxtLink>
-          <NuxtLink to="/wishlist">위시리스트</NuxtLink>
-          <NuxtLink to="/mypage">마이페이지</NuxtLink>
+          <template v-if="user && user.email === 'taebaek@gmail.com'">
+            <NuxtLink to="/wishlist">위시리스트</NuxtLink>
+            <NuxtLink to="/mypage">마이페이지</NuxtLink>
+          </template>
+          <template v-if="!user">
+            <NuxtLink to="/auth/login">로그인</NuxtLink>
+            <NuxtLink to="/auth/register">회원가입</NuxtLink>
+          </template>
+          <a v-else href="#" @click.prevent="handleLogout" class="logout-link">로그아웃</a>
         </div>
       </nav>
     </header>
@@ -32,6 +39,16 @@
     </footer>
   </div>
 </template>
+
+<script setup>
+const { user, logout } = useAuth()
+const router = useRouter()
+
+const handleLogout = async () => {
+  await logout()
+  router.push('/')
+}
+</script>
 
 <style scoped>
 .layout {
@@ -74,6 +91,14 @@
   text-decoration: none;
   color: var(--text-color);
   font-weight: 500;
+}
+
+.nav-links a:hover {
+  color: var(--primary-color);
+}
+
+.logout-link {
+  cursor: pointer;
 }
 
 .main-content {

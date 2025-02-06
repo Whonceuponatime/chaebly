@@ -2,14 +2,19 @@
   <div class="wishlist">
     <h1>위시리스트</h1>
     
-    <div class="wishlist-grid">
+    <div v-if="wishlistItems.length === 0" class="empty-state">
+      <p>아직 위시리스트에 담긴 상품이 없습니다.</p>
+      <NuxtLink to="/products" class="browse-btn">상품 둘러보기</NuxtLink>
+    </div>
+    
+    <div v-else class="wishlist-grid">
       <div v-for="item in wishlistItems" :key="item.id" class="wishlist-item">
         <div class="product-image">
           <img :src="item.image" alt="상품 이미지" />
         </div>
         <div class="product-info">
           <h3>{{ item.name }}</h3>
-          <p class="price">{{ item.price }}원</p>
+          <p class="price">{{ formatPrice(item.price) }}원</p>
           <p class="message">{{ item.message }}</p>
           <div class="actions">
             <button @click="removeFromWishlist(item.id)" class="remove-btn">삭제</button>
@@ -38,31 +43,30 @@
 </template>
 
 <script setup>
+import { useAuth } from '../composables/useAuth'
+import { useWishlist } from '../composables/useWishlist'
+import { useRouter } from 'vue-router'
+
+const { user } = useAuth()
+const router = useRouter()
+const { items: wishlistItems, removeItem: removeFromWishlist, updateMessage } = useWishlist()
+
+// Redirect if not authorized
+if (!user.value || user.value.email !== 'taebaek@gmail.com') {
+  router.push('/')
+}
+
 const showModal = ref(false)
 const currentMessage = ref('')
 const currentItem = ref(null)
 
-// Simulated wishlist data - this would normally come from your backend
-const wishlistItems = ref([
-  {
-    id: 1,
-    name: '귀여운 니트',
-    price: '39,000',
-    image: 'https://picsum.photos/400/500?random=1',
-    message: '이거 너무 예쁘지 않아? 우리 데이트할 때 입고 싶어 ❤️'
-  },
-  {
-    id: 2,
-    name: '캐주얼 청바지',
-    price: '45,000',
-    image: 'https://picsum.photos/400/500?random=2',
-    message: '오늘 하루도 잘 보내! 사랑해 😊'
-  }
-])
+const formatPrice = (price) => {
+  return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+}
 
 const showMessageModal = (item) => {
   currentItem.value = item
-  currentMessage.value = item.message
+  currentMessage.value = item.message || ''
   showModal.value = true
 }
 
@@ -74,17 +78,26 @@ const closeModal = () => {
 
 const saveMessage = () => {
   if (currentItem.value) {
-    const item = wishlistItems.value.find(i => i.id === currentItem.value.id)
-    if (item) {
-      item.message = currentMessage.value
-    }
+    updateMessage(currentItem.value.id, currentMessage.value)
   }
   closeModal()
 }
 
-const removeFromWishlist = (id) => {
-  wishlistItems.value = wishlistItems.value.filter(item => item.id !== id)
+// Add to wishlist function that will be used by other components
+const addToWishlist = (product) => {
+  const exists = wishlistItems.value.some(item => item.id === product.id)
+  if (!exists) {
+    wishlistItems.value.push({
+      ...product,
+      message: ''
+    })
+  }
 }
+
+// Expose the addToWishlist function to be used by other components
+defineExpose({
+  addToWishlist
+})
 </script>
 
 <style scoped>
@@ -96,6 +109,28 @@ const removeFromWishlist = (id) => {
 
 h1 {
   margin-bottom: 2rem;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  background-color: #f8f8f8;
+  border-radius: 8px;
+}
+
+.empty-state p {
+  margin-bottom: 1.5rem;
+  color: #666;
+}
+
+.browse-btn {
+  display: inline-block;
+  padding: 0.8rem 1.5rem;
+  background-color: var(--primary-color);
+  color: white;
+  text-decoration: none;
+  border-radius: 4px;
+  font-weight: 500;
 }
 
 .wishlist-grid {

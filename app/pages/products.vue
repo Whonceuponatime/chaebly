@@ -67,9 +67,15 @@
       <div v-else class="product-grid">
         <div v-for="product in filteredProducts" :key="product.id" class="product-card">
           <div class="product-image">
-            <img :src="product.image" :alt="product.name" />
-            <button class="wishlist-btn" @click="toggleWishlist(product)">
-              <span v-if="isInWishlist(product)">❤️</span>
+            <NuxtLink :to="`/products/${product.id}`">
+              <img :src="product.image" :alt="product.name" />
+            </NuxtLink>
+            <button 
+              v-if="user?.email === 'taebaek@gmail.com'"
+              class="wishlist-btn" 
+              @click="handleWishlist(product)"
+            >
+              <span v-if="isInWishlist(product.id)">❤️</span>
               <span v-else>🤍</span>
             </button>
           </div>
@@ -89,8 +95,12 @@
 
 <script setup>
 import { useRoute } from 'vue-router'
+import { useAuth } from '~/composables/useAuth'
+import { useWishlist } from '~/composables/useWishlist'
 
 const route = useRoute()
+const { user } = useAuth()
+const { addItem, removeItem, isInWishlist } = useWishlist()
 const selectedCategories = ref([])
 const selectedPriceRanges = ref([])
 const sortBy = ref('newest')
@@ -157,6 +167,36 @@ const products = ref([
     category: '상의',
     tags: ['니트', '가디건', '봄'],
     popularity: 91
+  },
+  {
+    id: 6,
+    name: '실크 블라우스',
+    brand: '채블리',
+    price: 68000,
+    image: 'https://picsum.photos/400/500?random=15',
+    category: '상의',
+    tags: ['블라우스', '봄', '여름'],
+    popularity: 89
+  },
+  {
+    id: 7,
+    name: '플라워 원피스',
+    brand: '러블리',
+    price: 85000,
+    image: 'https://picsum.photos/400/500?random=16',
+    category: '원피스',
+    tags: ['원피스', '봄', '여름'],
+    popularity: 94
+  },
+  {
+    id: 8,
+    name: '레더 미니 스커트',
+    brand: '스타일리시',
+    price: 55000,
+    image: 'https://picsum.photos/400/500?random=17',
+    category: '하의',
+    tags: ['스커트', '가을', '겨울'],
+    popularity: 87
   }
 ])
 
@@ -211,13 +251,28 @@ const formatPrice = (price) => {
   return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 }
 
-const isInWishlist = (product) => {
-  // Implement wishlist check logic
-  return false
-}
+const handleWishlist = (product) => {
+  if (!user.value) {
+    router.push('/auth/login')
+    return
+  }
+  
+  if (user.value.email !== 'taebaek@gmail.com') {
+    return
+  }
 
-const toggleWishlist = (product) => {
-  // Implement wishlist toggle logic
+  const wishlistProduct = {
+    id: product.id,
+    name: product.name,
+    price: product.price,
+    image: product.image
+  }
+
+  if (isInWishlist(product.id)) {
+    removeItem(product.id)
+  } else {
+    addItem(wishlistProduct)
+  }
 }
 
 // Watch route query changes to handle direct navigation to search results
@@ -339,11 +394,22 @@ select {
   position: absolute;
   top: 0.5rem;
   right: 0.5rem;
-  background: none;
+  background: rgba(255, 255, 255, 0.9);
   border: none;
-  font-size: 1.5rem;
+  border-radius: 50%;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  padding: 0.5rem;
+  font-size: 1.2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s;
+}
+
+.wishlist-btn:hover {
+  transform: scale(1.1);
 }
 
 .product-info {

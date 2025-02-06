@@ -70,7 +70,7 @@
 
       <div class="action-buttons">
         <button class="wishlist-btn" @click="toggleWishlist">
-          <span v-if="isInWishlist">❤️ 위시리스트에서 삭제</span>
+          <span v-if="isInWishlist(product.id)">❤️ 위시리스트에서 삭제</span>
           <span v-else>🤍 위시리스트에 담기</span>
         </button>
         <button class="buy-btn">구매하기</button>
@@ -90,14 +90,21 @@
 </template>
 
 <script setup>
+import { useRoute, useRouter } from 'vue-router'
+import { useAuth } from '../../composables/useAuth'
+import { useWishlist } from '../../composables/useWishlist'
+
 const route = useRoute()
+const router = useRouter()
+const { user } = useAuth()
+const { addItem, removeItem, isInWishlist } = useWishlist()
+
 const quantity = ref(1)
 const selectedSize = ref(null)
-const isInWishlist = ref(false)
 
 // Sample product data - this would normally come from your backend
 const product = ref({
-  id: route.params.id,
+  id: parseInt(route.params.id),
   name: '캐시미어 니트 스웨터',
   brand: '채블리',
   price: 89000,
@@ -113,6 +120,32 @@ const product = ref({
   description: '부드러운 캐시미어 소재로 제작된 프리미엄 니트 스웨터입니다. 데일리하게 착용하기 좋은 베이직한 디자인으로 다양한 코디에 활용하기 좋습니다.',
   tags: ['니트', '겨울', '데일리', '캐시미어']
 })
+
+const toggleWishlist = () => {
+  if (!user.value) {
+    // Redirect to login if not authenticated
+    router.push('/auth/login')
+    return
+  }
+  
+  if (user.value.email !== 'taebaek@gmail.com') {
+    // Only allow specific user to add to wishlist
+    return
+  }
+
+  const productId = product.value.id
+  if (isInWishlist(productId)) {
+    removeItem(productId)
+  } else {
+    const wishlistProduct = {
+      id: product.value.id,
+      name: product.value.name,
+      price: product.value.price,
+      image: product.value.mainImage
+    }
+    addItem(wishlistProduct)
+  }
+}
 
 const formatPrice = (price) => {
   return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
@@ -134,11 +167,6 @@ const decreaseQuantity = () => {
 
 const increaseQuantity = () => {
   if (quantity.value < 99) quantity.value++
-}
-
-const toggleWishlist = () => {
-  isInWishlist.value = !isInWishlist.value
-  // Implement wishlist toggle logic
 }
 </script>
 

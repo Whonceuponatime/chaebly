@@ -113,12 +113,23 @@
 </template>
 
 <script setup>
+import { useAuth } from '../composables/useAuth'
+import { useRouter } from 'vue-router'
+
+const { user } = useAuth()
+const router = useRouter()
+
+// Redirect if not authorized
+if (!user.value || user.value.email !== 'taebaek@gmail.com') {
+  router.push('/')
+}
+
 const activeTab = ref('orders')
 
 // Sample user data
-const user = ref({
+const userData = ref({
   name: '김채블리',
-  email: 'chaebly@example.com',
+  email: user.value?.email || '',
   phone: '010-1234-5678'
 })
 
