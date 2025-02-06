@@ -1,0 +1,169 @@
+<template>
+  <div class="auth-container">
+    <div class="auth-card">
+      <h1>회원가입</h1>
+      
+      <form @submit.prevent="handleRegister" class="auth-form">
+        <div class="form-group">
+          <label for="email">이메일</label>
+          <input
+            id="email"
+            v-model="email"
+            type="email"
+            required
+            placeholder="이메일을 입력하세요"
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="password">비밀번호</label>
+          <input
+            id="password"
+            v-model="password"
+            type="password"
+            required
+            placeholder="비밀번호를 입력하세요"
+          >
+          <small>최소 6자 이상의 비밀번호를 입력해주세요</small>
+        </div>
+
+        <div class="form-group">
+          <label for="confirmPassword">비밀번호 확인</label>
+          <input
+            id="confirmPassword"
+            v-model="confirmPassword"
+            type="password"
+            required
+            placeholder="비밀번호를 다시 입력하세요"
+          >
+        </div>
+
+        <p v-if="error" class="error-message">{{ error }}</p>
+
+        <button type="submit" class="submit-btn" :disabled="loading || !isPasswordMatch">
+          {{ loading ? '가입 중...' : '회원가입' }}
+        </button>
+
+        <div class="auth-links">
+          <NuxtLink to="/auth/login">이미 계정이 있으신가요? 로그인하기</NuxtLink>
+        </div>
+      </form>
+    </div>
+  </div>
+</template>
+
+<script setup>
+const router = useRouter()
+const { register, loading, error } = useAuth()
+
+const email = ref('')
+const password = ref('')
+const confirmPassword = ref('')
+
+const isPasswordMatch = computed(() => {
+  return password.value && confirmPassword.value && password.value === confirmPassword.value
+})
+
+const handleRegister = async () => {
+  if (!isPasswordMatch.value) {
+    error.value = '비밀번호가 일치하지 않습니다'
+    return
+  }
+  
+  await register(email.value, password.value)
+  if (!error.value) {
+    router.push('/auth/login')
+  }
+}
+</script>
+
+<style scoped>
+.auth-container {
+  min-height: calc(100vh - 60px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.auth-card {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 400px;
+}
+
+.auth-card h1 {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: var(--primary-color);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.form-group input {
+  padding: 0.8rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+
+.form-group small {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.error-message {
+  color: #ff4e4e;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.submit-btn {
+  background-color: var(--primary-color);
+  color: white;
+  padding: 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.submit-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.auth-links {
+  display: flex;
+  justify-content: center;
+  font-size: 0.9rem;
+}
+
+.auth-links a {
+  color: #666;
+  text-decoration: none;
+}
+
+.auth-links a:hover {
+  color: var(--primary-color);
+}
+</style> 
