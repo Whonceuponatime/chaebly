@@ -17,6 +17,9 @@ importers:
       nuxt:
         specifier: ^3.15.1
         version: 3.15.1(@parcel/watcher@2.4.1)(@types/node@22.8.1)(db0@0.2.1)(encoding@0.1.13)(eslint@9.18.0(jiti@2.4.2))(ioredis@5.4.1)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.24.4)(terser@5.34.1)(typescript@5.7.3)(vite@6.0.7(@types/node@22.8.1)(jiti@2.4.2)(terser@5.34.1)(yaml@2.7.0))(vue-tsc@2.2.0(typescript@5.7.3))(webpack-sources@3.2.3)(yaml@2.7.0)
+      nuxt-app:
+        specifier: 'file:'
+        version: file:(@parcel/watcher@2.4.1)(@types/node@22.8.1)(@vue/compiler-sfc@3.5.13)(db0@0.2.1)(encoding@0.1.13)(eslint@9.18.0(jiti@2.4.2))(ioredis@5.4.1)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.24.4)(terser@5.34.1)(typescript@5.7.3)(vite@6.0.7(@types/node@22.8.1)(jiti@2.4.2)(terser@5.34.1)(yaml@2.7.0))(vue-tsc@2.2.0(typescript@5.7.3))(webpack-sources@3.2.3)(yaml@2.7.0)
       vue:
         specifier: ^3.5.13
         version: 3.5.13(typescript@5.7.3)
@@ -3501,6 +3504,9 @@ packages:
     resolution: {integrity: sha512-yjJggqwSkymaWM/f4+1nPBTW1Hg7tZ0ZQax69zlqq+Ftc6rfAnJSgGUwhAuoo7E7x3JGQ0Uzzokz11Y7PuRj6g==}
     engines: {node: ^16.10.0 || >=18.0.0}
     hasBin: true
+
+  'nuxt-app@file:':
+    resolution: {directory: '', type: directory}
 
   nuxt@3.15.1:
     resolution: {integrity: sha512-8sKgqjhu5JoaVv89TnBW5S0jvsXRrEWGF+CguYUPK+6sRAtNcJAwcWxd4pEmURYQ2D0jjdfgr/VyH0i9CdhkBQ==}
@@ -9215,6 +9221,72 @@ snapshots:
       boolbase: 1.0.0
 
   nuxi@3.19.1: {}
+
+  nuxt-app@file:(@parcel/watcher@2.4.1)(@types/node@22.8.1)(@vue/compiler-sfc@3.5.13)(db0@0.2.1)(encoding@0.1.13)(eslint@9.18.0(jiti@2.4.2))(ioredis@5.4.1)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.24.4)(terser@5.34.1)(typescript@5.7.3)(vite@6.0.7(@types/node@22.8.1)(jiti@2.4.2)(terser@5.34.1)(yaml@2.7.0))(vue-tsc@2.2.0(typescript@5.7.3))(webpack-sources@3.2.3)(yaml@2.7.0):
+    dependencies:
+      '@nuxt/eslint': 0.7.5(@vue/compiler-sfc@3.5.13)(eslint@9.18.0(jiti@2.4.2))(magicast@0.3.5)(rollup@4.24.4)(typescript@5.7.3)(vite@6.0.7(@types/node@22.8.1)(jiti@2.4.2)(terser@5.34.1)(yaml@2.7.0))
+      '@nuxthub/core': 0.8.11(db0@0.2.1)(ioredis@5.4.1)(magicast@0.3.5)(rollup@4.24.4)(vite@6.0.7(@types/node@22.8.1)(jiti@2.4.2)(terser@5.34.1)(yaml@2.7.0))
+      nuxt: 3.15.1(@parcel/watcher@2.4.1)(@types/node@22.8.1)(db0@0.2.1)(encoding@0.1.13)(eslint@9.18.0(jiti@2.4.2))(ioredis@5.4.1)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.24.4)(terser@5.34.1)(typescript@5.7.3)(vite@6.0.7(@types/node@22.8.1)(jiti@2.4.2)(terser@5.34.1)(yaml@2.7.0))(vue-tsc@2.2.0(typescript@5.7.3))(webpack-sources@3.2.3)(yaml@2.7.0)
+      vue: 3.5.13(typescript@5.7.3)
+      vue-router: 4.5.0(vue@3.5.13(typescript@5.7.3))
+    transitivePeerDependencies:
+      - '@azure/app-configuration'
+      - '@azure/cosmos'
+      - '@azure/data-tables'
+      - '@azure/identity'
+      - '@azure/keyvault-secrets'
+      - '@azure/storage-blob'
+      - '@biomejs/biome'
+      - '@capacitor/preferences'
+      - '@deno/kv'
+      - '@electric-sql/pglite'
+      - '@libsql/client'
+      - '@netlify/blobs'
+      - '@parcel/watcher'
+      - '@planetscale/database'
+      - '@types/node'
+      - '@upstash/redis'
+      - '@vercel/blob'
+      - '@vercel/kv'
+      - '@vue/compiler-sfc'
+      - aws4fetch
+      - better-sqlite3
+      - bufferutil
+      - db0
+      - drizzle-orm
+      - encoding
+      - eslint
+      - eslint-plugin-format
+      - eslint-webpack-plugin
+      - idb-keyval
+      - ioredis
+      - less
+      - lightningcss
+      - magicast
+      - meow
+      - mysql2
+      - optionator
+      - rolldown
+      - rollup
+      - sass
+      - sass-embedded
+      - stylelint
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+      - tsx
+      - typescript
+      - uploadthing
+      - utf-8-validate
+      - vite
+      - vite-plugin-eslint2
+      - vls
+      - vti
+      - vue-tsc
+      - webpack-sources
+      - xml2js
+      - yaml
 
   nuxt@3.15.1(@parcel/watcher@2.4.1)(@types/node@22.8.1)(db0@0.2.1)(encoding@0.1.13)(eslint@9.18.0(jiti@2.4.2))(ioredis@5.4.1)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.24.4)(terser@5.34.1)(typescript@5.7.3)(vite@6.0.7(@types/node@22.8.1)(jiti@2.4.2)(terser@5.34.1)(yaml@2.7.0))(vue-tsc@2.2.0(typescript@5.7.3))(webpack-sources@3.2.3)(yaml@2.7.0):
     dependencies:
