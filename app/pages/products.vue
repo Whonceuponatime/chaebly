@@ -1,90 +1,96 @@
 <template>
-  <div class="products">
-    <div class="filters">
-      <div class="search-section">
-        <SearchBar />
-      </div>
-      
-      <div class="filter-section">
-        <h3>카테고리</h3>
-        <div class="filter-options">
-          <label v-for="cat in categories" :key="cat">
-            <input 
-              type="checkbox" 
-              v-model="selectedCategories" 
-              :value="cat"
-              @change="filterProducts"
-            >
-            {{ cat }}
-          </label>
+  <div class="products-page">
+    <SlidingBanner />
+    
+    <div class="products">
+      <div class="filters">
+        <div class="search-section">
+          <SearchBar />
         </div>
-      </div>
-
-      <div class="filter-section">
-        <h3>가격대</h3>
-        <div class="filter-options">
-          <label v-for="range in priceRanges" :key="range.label">
-            <input 
-              type="checkbox" 
-              v-model="selectedPriceRanges" 
-              :value="range"
-              @change="filterProducts"
-            >
-            {{ range.label }}
-          </label>
-        </div>
-      </div>
-
-      <div class="filter-section">
-        <h3>정렬</h3>
-        <select v-model="sortBy" @change="filterProducts">
-          <option value="newest">최신순</option>
-          <option value="priceAsc">가격 낮은순</option>
-          <option value="priceDesc">가격 높은순</option>
-          <option value="popular">인기순</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="products-container">
-      <div class="products-header">
-        <h1>
-          <template v-if="route.query.search">
-            "{{ route.query.search }}" 검색결과
-          </template>
-          <template v-else>
-            전체상품
-          </template>
-          <span>({{ filteredProducts.length }})</span>
-        </h1>
-      </div>
-
-      <div v-if="filteredProducts.length === 0" class="no-results">
-        <p>검색 결과가 없습니다.</p>
-        <p>다른 검색어를 입력해보세요.</p>
-      </div>
-
-      <div v-else class="product-grid">
-        <div v-for="product in filteredProducts" :key="product.id" class="product-card">
-          <div class="product-image">
-            <NuxtLink :to="`/products/${product.id}`">
-              <img :src="product.image" :alt="product.name" />
-            </NuxtLink>
-            <button 
-              v-if="user?.email === 'taebaek@gmail.com'"
-              class="wishlist-btn" 
-              @click="handleWishlist(product)"
-            >
-              <span v-if="isInWishlist(product.id)">❤️</span>
-              <span v-else>🤍</span>
-            </button>
+        
+        <div class="filter-section">
+          <h3>카테고리</h3>
+          <div class="category-filters">
+            <label v-for="(icon, category) in categoryIcons" :key="category" class="category-filter">
+              <input 
+                type="checkbox" 
+                v-model="selectedCategories" 
+                :value="category"
+                @change="filterProducts"
+              >
+              <img :src="icon" :alt="categoryMapping[category]">
+              <span>{{ categoryMapping[category] }}</span>
+            </label>
           </div>
-          <div class="product-info">
-            <div class="brand">{{ product.brand }}</div>
-            <h3>{{ product.name }}</h3>
-            <p class="price">{{ formatPrice(product.price) }}원</p>
-            <div class="tags">
-              <span v-for="tag in product.tags" :key="tag">#{{ tag }}</span>
+        </div>
+
+        <div class="filter-section">
+          <h3>가격대</h3>
+          <div class="filter-options">
+            <label v-for="range in priceRanges" :key="range.label">
+              <input 
+                type="checkbox" 
+                v-model="selectedPriceRanges" 
+                :value="range"
+                @change="filterProducts"
+              >
+              {{ range.label }}
+            </label>
+          </div>
+        </div>
+
+        <div class="filter-section">
+          <h3>정렬</h3>
+          <select v-model="sortBy" @change="filterProducts">
+            <option value="newest">최신순</option>
+            <option value="priceAsc">가격 낮은순</option>
+            <option value="priceDesc">가격 높은순</option>
+            <option value="popular">인기순</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="products-container">
+        <div class="products-header">
+          <h1>
+            <template v-if="route.query.search">
+              "{{ route.query.search }}" 검색결과
+            </template>
+            <template v-else>
+              전체상품
+            </template>
+            <span>({{ filteredProducts.length }})</span>
+          </h1>
+        </div>
+
+        <div v-if="filteredProducts.length === 0" class="no-results">
+          <p>검색 결과가 없습니다.</p>
+          <p>다른 검색어를 입력해보세요.</p>
+        </div>
+
+        <div v-else class="product-grid">
+          <div v-for="product in filteredProducts" :key="product.id" class="product-card">
+            <div class="product-image">
+              <NuxtLink :to="`/products/${product.id}`">
+                <img :src="product.image" :alt="product.name" />
+              </NuxtLink>
+              <button 
+                v-if="user"
+                class="wishlist-btn" 
+                :class="{ 'in-wishlist': isInWishlist(product.id) }"
+                @click="handleWishlist(product)"
+              >
+                <span v-if="isInWishlist(product.id)">❤️</span>
+                <span v-else>🤍</span>
+              </button>
+            </div>
+            <div class="product-info">
+              <div class="brand">{{ product.brand }}</div>
+              <h3>{{ product.name }}</h3>
+              <p class="price">{{ formatPrice(product.price) }}원</p>
+              <div class="tags">
+                <span v-for="tag in product.tags" :key="tag">#{{ tag }}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -97,17 +103,38 @@
 import { useRoute } from 'vue-router'
 import { useAuth } from '~/composables/useAuth'
 import { useWishlist } from '~/composables/useWishlist'
+import { useProducts } from '../composables/useProducts'
+import SlidingBanner from '../components/SlidingBanner.vue'
 
 const route = useRoute()
 const { user } = useAuth()
 const { addItem, removeItem, isInWishlist } = useWishlist()
+const { products } = useProducts()
 const selectedCategories = ref([])
 const selectedPriceRanges = ref([])
 const sortBy = ref('newest')
 
-const categories = [
-  '상의', '하의', '원피스', '아우터', '가방', '신발', '액세서리'
-]
+const categoryMapping = {
+  'top': '상의',
+  'bottom': '하의',
+  'dress': '원피스',
+  'outer': '아우터',
+  'bag': '가방',
+  'shoes': '신발',
+  'accessory': '액세서리',
+  'jewelry': '주얼리'
+}
+
+const categoryIcons = {
+  'top': '/images/icon_category_top.png',
+  'bottom': '/images/icon_category_bottom.png',
+  'dress': '/images/icon_category_dress.png',
+  'outer': '/images/icon_category_outer.png',
+  'bag': '/images/icon_category_bag.png',
+  'shoes': '/images/icon_category_shoes.png',
+  'accessory': '/images/icon_category_accessory.png',
+  'jewelry': '/images/icon_category_jewelry.png'
+}
 
 const priceRanges = [
   { label: '2만원 이하', min: 0, max: 20000 },
@@ -116,92 +143,8 @@ const priceRanges = [
   { label: '10만원 이상', min: 100000, max: Infinity }
 ]
 
-// Sample products data
-const products = ref([
-  {
-    id: 1,
-    name: '캐시미어 니트 스웨터',
-    brand: '채블리',
-    price: 89000,
-    image: 'https://picsum.photos/400/500?random=10',
-    category: '상의',
-    tags: ['니트', '겨울', '데일리'],
-    popularity: 95
-  },
-  {
-    id: 2,
-    name: '하이웨스트 와이드 데님',
-    brand: '러블리',
-    price: 45000,
-    image: 'https://picsum.photos/400/500?random=11',
-    category: '하의',
-    tags: ['데님', '데일리'],
-    popularity: 88
-  },
-  {
-    id: 3,
-    name: '플리츠 미디 스커트',
-    brand: '스타일리시',
-    price: 35000,
-    image: 'https://picsum.photos/400/500?random=12',
-    category: '하의',
-    tags: ['스커트', '봄'],
-    popularity: 92
-  },
-  {
-    id: 4,
-    name: '오버사이즈 트렌치코트',
-    brand: '채블리',
-    price: 129000,
-    image: 'https://picsum.photos/400/500?random=13',
-    category: '아우터',
-    tags: ['코트', '봄', '가을'],
-    popularity: 97
-  },
-  {
-    id: 5,
-    name: '크롭 캐시미어 가디건',
-    brand: '러블리',
-    price: 79000,
-    image: 'https://picsum.photos/400/500?random=14',
-    category: '상의',
-    tags: ['니트', '가디건', '봄'],
-    popularity: 91
-  },
-  {
-    id: 6,
-    name: '실크 블라우스',
-    brand: '채블리',
-    price: 68000,
-    image: 'https://picsum.photos/400/500?random=15',
-    category: '상의',
-    tags: ['블라우스', '봄', '여름'],
-    popularity: 89
-  },
-  {
-    id: 7,
-    name: '플라워 원피스',
-    brand: '러블리',
-    price: 85000,
-    image: 'https://picsum.photos/400/500?random=16',
-    category: '원피스',
-    tags: ['원피스', '봄', '여름'],
-    popularity: 94
-  },
-  {
-    id: 8,
-    name: '레더 미니 스커트',
-    brand: '스타일리시',
-    price: 55000,
-    image: 'https://picsum.photos/400/500?random=17',
-    category: '하의',
-    tags: ['스커트', '가을', '겨울'],
-    popularity: 87
-  }
-])
-
 const filteredProducts = computed(() => {
-  let result = [...products.value]
+  let result = [...products]
 
   // Apply search filter
   if (route.query.search) {
@@ -256,10 +199,6 @@ const handleWishlist = (product) => {
     router.push('/auth/login')
     return
   }
-  
-  if (user.value.email !== 'taebaek@gmail.com') {
-    return
-  }
 
   const wishlistProduct = {
     id: product.id,
@@ -287,12 +226,18 @@ watch(() => route.query.search, (newSearch) => {
 </script>
 
 <style scoped>
+.products-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
 .products {
   display: flex;
   gap: 2rem;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 1rem;
+  padding: 1rem 0;
 }
 
 .filters {
@@ -405,11 +350,19 @@ select {
   cursor: pointer;
   font-size: 1.2rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s;
+  transition: all 0.2s;
 }
 
 .wishlist-btn:hover {
   transform: scale(1.1);
+}
+
+.wishlist-btn.in-wishlist {
+  background-color: var(--primary-color);
+}
+
+.wishlist-btn.in-wishlist:hover {
+  background-color: #ff3a3c;
 }
 
 .product-info {
@@ -446,6 +399,40 @@ select {
   font-size: 0.8rem;
 }
 
+.category-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 1rem;
+}
+
+.category-filter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.category-filter input {
+  display: none;
+}
+
+.category-filter img {
+  width: 40px;
+  height: 40px;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.category-filter input:checked + img {
+  opacity: 1;
+}
+
+.category-filter span {
+  font-size: 0.9rem;
+  color: #666;
+}
+
 @media (max-width: 768px) {
   .products {
     flex-direction: column;
@@ -453,6 +440,89 @@ select {
 
   .filters {
     width: 100%;
+    position: relative;
+  }
+
+  .search-section {
+    margin-bottom: 1rem;
+  }
+
+  .filter-section {
+    margin-bottom: 1.5rem;
+  }
+
+  .category-filters {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+  }
+
+  .category-filter img {
+    width: 32px;
+    height: 32px;
+  }
+
+  .category-filter span {
+    font-size: 0.8rem;
+  }
+
+  .product-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .product-card {
+    font-size: 0.9rem;
+  }
+
+  .product-info {
+    padding: 0.75rem;
+  }
+
+  .product-info h3 {
+    font-size: 0.9rem;
+  }
+
+  .tags span {
+    font-size: 0.7rem;
+    padding: 0.1rem 0.4rem;
+  }
+
+  .products-header h1 {
+    font-size: 1.2rem;
+  }
+
+  .filter-options label {
+    padding: 0.5rem 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .products-page {
+    padding: 0 0.5rem;
+  }
+
+  .category-filters {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .product-grid {
+    grid-template-columns: repeat(1, 1fr);
+  }
+
+  .product-card {
+    max-width: 100%;
+  }
+
+  .filter-section h3 {
+    font-size: 0.9rem;
+  }
+
+  .filter-options {
+    font-size: 0.9rem;
+  }
+
+  select {
+    font-size: 0.9rem;
   }
 }
 </style> 

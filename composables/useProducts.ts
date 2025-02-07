@@ -6,7 +6,7 @@ export const products: Product[] = [
     name: '프리미엄 실크 블라우스',
     brand: '채블리',
     price: 68000,
-    image: 'https://image.msscdn.net/images/goods_img/20220311/2410515/2410515_1_500.jpg',
+    image: '/images/2c2e04fc2f14e9aff3260268b4930296.webp',
     category: 'top',
     tags: ['봄', '여름', '오피스룩'],
     popularity: 4.8
@@ -16,7 +16,7 @@ export const products: Product[] = [
     name: '플라워 패턴 원피스',
     brand: '러블리',
     price: 85000,
-    image: 'https://image.msscdn.net/images/goods_img/20230309/3129998/3129998_16783248619711_500.jpg',
+    image: '/images/c71e6a65c0be5656a4253693d3821509.webp',
     category: 'dress',
     tags: ['봄', '여름', '데이트룩'],
     popularity: 4.7
@@ -26,7 +26,7 @@ export const products: Product[] = [
     name: '레더 미니스커트',
     brand: '스타일리시',
     price: 55000,
-    image: 'https://image.msscdn.net/images/goods_img/20230920/3506833/3506833_16951633050925_500.jpg',
+    image: '/images/df51ebd7101025fb37a4e622bf9b2e91.webp',
     category: 'bottom',
     tags: ['가을', '겨울', '파티룩'],
     popularity: 4.6
@@ -36,7 +36,7 @@ export const products: Product[] = [
     name: '캐시미어 니트 가디건',
     brand: '채블리',
     price: 98000,
-    image: 'https://image.msscdn.net/images/goods_img/20230828/3453961/3453961_16931830886431_500.jpg',
+    image: '/images/61e38519062bcbf514a9e96547158cb0.webp',
     category: 'outer',
     tags: ['가을', '겨울', '데일리룩'],
     popularity: 4.9
@@ -46,7 +46,7 @@ export const products: Product[] = [
     name: '크롭 데님 자켓',
     brand: '스타일리시',
     price: 75000,
-    image: 'https://image.msscdn.net/images/goods_img/20230222/3106843/3106843_16771022562863_500.jpg',
+    image: '/images/bdd5b563eb42fb8244ad3efa58cd1b0e.webp',
     category: 'outer',
     tags: ['봄', '가을', '캐주얼'],
     popularity: 4.5
@@ -56,7 +56,7 @@ export const products: Product[] = [
     name: '플리츠 롱스커트',
     brand: '러블리',
     price: 65000,
-    image: 'https://image.msscdn.net/images/goods_img/20230313/3136061/3136061_16786494098946_500.jpg',
+    image: '/images/7ad9338c8c3c2caa1ec82db7f002f549.webp',
     category: 'bottom',
     tags: ['봄', '여름', '페미닌'],
     popularity: 4.7
@@ -66,7 +66,7 @@ export const products: Product[] = [
     name: '퍼프 슬리브 티셔츠',
     brand: '채블리',
     price: 45000,
-    image: 'https://image.msscdn.net/images/goods_img/20230310/3132931/3132931_16784850515276_500.jpg',
+    image: '/images/1b15de2159e0903bdf618bab7d1a3527.webp',
     category: 'top',
     tags: ['봄', '여름', '데일리룩'],
     popularity: 4.4
@@ -76,7 +76,7 @@ export const products: Product[] = [
     name: '와이드 슬랙스',
     brand: '스타일리시',
     price: 58000,
-    image: 'https://image.msscdn.net/images/goods_img/20230911/3488827/3488827_16944340741455_500.jpg',
+    image: '/images/dd3f706dc12e1d53d3d4e6b5d0172f27.webp',
     category: 'bottom',
     tags: ['봄', '가을', '오피스룩'],
     popularity: 4.8
@@ -86,7 +86,7 @@ export const products: Product[] = [
     name: '셔링 니트 원피스',
     brand: '러블리',
     price: 78000,
-    image: 'https://image.msscdn.net/images/goods_img/20230828/3453961/3453961_16931830886431_500.jpg',
+    image: '/images/674efce27a161528359baddb69eb576f.webp',
     category: 'dress',
     tags: ['가을', '겨울', '데이트룩'],
     popularity: 4.7
@@ -96,7 +96,7 @@ export const products: Product[] = [
     name: '오버사이즈 트렌치코트',
     brand: '채블리',
     price: 158000,
-    image: 'https://image.msscdn.net/images/goods_img/20230828/3453965/3453965_16931831526149_500.jpg',
+    image: '/images/93b0a2b3a29e9e304b80ece96c250ce9.webp',
     category: 'outer',
     tags: ['봄', '가을', '데일리룩'],
     popularity: 4.9
@@ -106,7 +106,7 @@ export const products: Product[] = [
     name: '실크 블렌드 블라우스',
     brand: '러블리',
     price: 68000,
-    image: 'https://image.msscdn.net/images/goods_img/20230313/3136061/3136061_16786494098946_500.jpg',
+    image: '/images/21e46e026ec76fdf0620093fbf7d3595.webp',
     category: 'top',
     tags: ['봄', '여름', '오피스룩'],
     popularity: 4.6
@@ -116,7 +116,7 @@ export const products: Product[] = [
     name: '하이웨이스트 와이드 데님',
     brand: '스타일리시',
     price: 82000,
-    image: 'https://image.msscdn.net/images/goods_img/20230911/3488827/3488827_16944340741455_500.jpg',
+    image: '/images/f06a787bb953d765a174044ff60970f8.webp',
     category: 'bottom',
     tags: ['봄', '가을', '데일리룩'],
     popularity: 4.8

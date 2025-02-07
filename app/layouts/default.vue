@@ -3,15 +3,20 @@
     <header class="header">
       <nav class="nav-container">
         <NuxtLink to="/" class="logo">채블리</NuxtLink>
-        <div class="nav-links">
-          <NuxtLink to="/products">상품</NuxtLink>
+        
+        <button class="mobile-menu-btn" @click="isMobileMenuOpen = !isMobileMenuOpen">
+          <span class="menu-icon"></span>
+        </button>
+
+        <div class="nav-links" :class="{ 'mobile-open': isMobileMenuOpen }">
+          <NuxtLink to="/products" @click="isMobileMenuOpen = false">상품</NuxtLink>
           <template v-if="user && user.email === 'taebaek@gmail.com'">
-            <NuxtLink to="/wishlist">위시리스트</NuxtLink>
-            <NuxtLink to="/mypage">마이페이지</NuxtLink>
+            <NuxtLink to="/wishlist" @click="isMobileMenuOpen = false">위시리스트</NuxtLink>
+            <NuxtLink to="/mypage" @click="isMobileMenuOpen = false">마이페이지</NuxtLink>
           </template>
           <template v-if="!user">
-            <NuxtLink to="/auth/login">로그인</NuxtLink>
-            <NuxtLink to="/auth/register">회원가입</NuxtLink>
+            <NuxtLink to="/auth/login" @click="isMobileMenuOpen = false">로그인</NuxtLink>
+            <NuxtLink to="/auth/register" @click="isMobileMenuOpen = false">회원가입</NuxtLink>
           </template>
           <a v-else href="#" @click.prevent="handleLogout" class="logout-link">로그아웃</a>
         </div>
@@ -43,11 +48,18 @@
 <script setup>
 const { user, logout } = useAuth()
 const router = useRouter()
+const isMobileMenuOpen = ref(false)
 
 const handleLogout = async () => {
+  isMobileMenuOpen.value = false
   await logout()
   router.push('/')
 }
+
+// Close mobile menu when route changes
+watch(() => router.currentRoute.value.path, () => {
+  isMobileMenuOpen.value = false
+})
 </script>
 
 <style scoped>
@@ -80,6 +92,57 @@ const handleLogout = async () => {
   font-weight: 700;
   color: var(--primary-color);
   text-decoration: none;
+  z-index: 1001;
+}
+
+.mobile-menu-btn {
+  display: none;
+  background: none;
+  border: none;
+  padding: 0.5rem;
+  cursor: pointer;
+  z-index: 1001;
+}
+
+.menu-icon {
+  display: block;
+  width: 24px;
+  height: 2px;
+  background-color: var(--text-color);
+  position: relative;
+  transition: background-color 0.3s;
+}
+
+.menu-icon::before,
+.menu-icon::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 2px;
+  background-color: var(--text-color);
+  transition: transform 0.3s;
+}
+
+.menu-icon::before {
+  top: -6px;
+}
+
+.menu-icon::after {
+  bottom: -6px;
+}
+
+.mobile-menu-btn.active .menu-icon {
+  background-color: transparent;
+}
+
+.mobile-menu-btn.active .menu-icon::before {
+  transform: rotate(45deg);
+  top: 0;
+}
+
+.mobile-menu-btn.active .menu-icon::after {
+  transform: rotate(-45deg);
+  bottom: 0;
 }
 
 .nav-links {
@@ -131,5 +194,55 @@ const handleLogout = async () => {
   font-size: 0.9rem;
   color: #666;
   margin-bottom: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .mobile-menu-btn {
+    display: block;
+  }
+
+  .nav-links {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--background-color);
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
+    transform: translateX(100%);
+    transition: transform 0.3s ease-in-out;
+    padding: 2rem;
+    font-size: 1.2rem;
+  }
+
+  .nav-links.mobile-open {
+    transform: translateX(0);
+  }
+
+  .main-content {
+    padding: 0.5rem;
+  }
+
+  .footer-content {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .nav-container {
+    padding: 0.75rem 1rem;
+  }
+
+  .logo {
+    font-size: 1.2rem;
+  }
+
+  .main-content {
+    margin-top: 50px;
+  }
 }
 </style> 

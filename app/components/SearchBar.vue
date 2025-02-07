@@ -201,4 +201,53 @@ const handleBlur = () => {
   font-size: 0.8rem;
   font-weight: bold;
 }
+
+@media (max-width: 768px) {
+  .search-input-wrapper input {
+    padding: 0.75rem;
+    font-size: 0.9rem;
+  }
+
+  .search-button {
+    padding: 0.75rem;
+  }
+
+  .popular-searches {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .suggestion-section {
+    padding: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .search-input-wrapper input {
+    padding: 0.5rem;
+  }
+
+  .search-button {
+    padding: 0.5rem;
+  }
+
+  .popular-searches {
+    grid-template-columns: 1fr;
+  }
+
+  .suggestion-section h3 {
+    font-size: 0.8rem;
+  }
+
+  .suggestion-item,
+  .popular-item {
+    font-size: 0.9rem;
+    padding: 0.4rem;
+  }
+
+  .rank {
+    width: 18px;
+    height: 18px;
+    font-size: 0.7rem;
+  }
+}
 </style> 
