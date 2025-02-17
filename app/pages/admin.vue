@@ -81,6 +81,196 @@
           </div>
         </section>
 
+        <!-- Mendez Poker Bot -->
+        <section class="admin-section">
+          <h2>Mendez Poker Bot Control Panel</h2>
+          
+          <!-- Bot Status -->
+          <div class="bot-status">
+            <div class="status-item">
+              <h3>Bot Status</h3>
+              <p :class="botEnabled ? 'status-active' : 'status-inactive'">
+                {{ botEnabled ? 'Active' : 'Inactive' }}
+              </p>
+              <button 
+                @click="toggleBot" 
+                :class="botEnabled ? 'danger-btn' : 'primary-btn'"
+              >
+                {{ botEnabled ? 'Disable Bot' : 'Enable Bot' }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Integration Status -->
+          <div class="integration-status">
+            <div class="status-grid">
+              <div class="status-item">
+                <h3>Flopzilla Status</h3>
+                <p :class="flopzillaConnected ? 'status-active' : 'status-inactive'">
+                  {{ flopzillaConnected ? 'Connected' : 'Disconnected' }}
+                </p>
+                <button @click="testFlopzillaConnection" :disabled="loading">
+                  Test Connection
+                </button>
+              </div>
+              <div class="status-item">
+                <h3>OpenAI Status</h3>
+                <p :class="openAIConnected ? 'status-active' : 'status-inactive'">
+                  {{ openAIConnected ? 'Connected' : 'Disconnected' }}
+                </p>
+                <button @click="testOpenAIConnection" :disabled="loading">
+                  Test Connection
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Player Tracking -->
+          <div class="player-tracking">
+            <h3>Player Statistics</h3>
+            <div class="player-list">
+              <div v-for="player in trackedPlayers" :key="player.name" class="player-item">
+                <div class="player-info">
+                  <p class="name">{{ player.name }}</p>
+                  <p class="style">Style: {{ player.style }}</p>
+                  <p class="stats">
+                    Aggressive: {{ player.aggressive }}% | 
+                    Passive: {{ player.passive }}%
+                  </p>
+                </div>
+                <button @click="resetPlayerStats(player.name)" class="secondary-btn">
+                  Reset Stats
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Current Game State -->
+          <div class="game-state">
+            <h3>Current Game State</h3>
+            <div class="state-info">
+              <p><strong>Current Hand:</strong> {{ gameState.currentHand || 'No active hand' }}</p>
+              <p><strong>Last Action:</strong> {{ gameState.lastAction || 'None' }}</p>
+              <p><strong>Suggested Move:</strong> {{ gameState.suggestedMove || 'Waiting...' }}</p>
+              <p><strong>AI Adaptation:</strong> {{ gameState.aiSuggestion || 'Waiting...' }}</p>
+              <div v-if="aiError" class="error-message">
+                {{ aiError }}
+              </div>
+            </div>
+            <!-- Test Controls -->
+            <div class="test-controls">
+              <button 
+                @click="updateGameState('AKs')" 
+                :disabled="!openAIConnected || loading"
+                class="primary-btn"
+              >
+                Test with AKs
+              </button>
+              <button 
+                @click="updateGameState('JTs')" 
+                :disabled="!openAIConnected || loading"
+                class="primary-btn"
+              >
+                Test with JTs
+              </button>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="action-buttons">
+            <button 
+              @click="clearGameState" 
+              :disabled="loading"
+              class="danger-btn"
+            >
+              Clear Game State
+            </button>
+            <button 
+              @click="exportPlayerData" 
+              :disabled="loading"
+              class="primary-btn"
+            >
+              Export Player Data
+            </button>
+          </div>
+        </section>
+
+        <!-- Mendez Statistics -->
+        <section class="admin-section">
+          <h2>Mendez Statistics Dashboard</h2>
+          
+          <!-- Overall Stats -->
+          <div class="stats-grid">
+            <div v-for="stat in detailedStats" :key="stat.id" class="stats-card">
+              <h3>{{ stat.name }}</h3>
+              <div class="stats-content">
+                <!-- Win Rate Chart -->
+                <div class="chart-wrapper">
+                  <WinRateChart
+                    :btn-win-rate="stat.btn_win_rate"
+                    :sb-win-rate="stat.sb_win_rate"
+                    :bb-win-rate="stat.bb_win_rate"
+                  />
+                </div>
+                
+                <!-- Betting Stats Chart -->
+                <div class="chart-wrapper">
+                  <BettingStatsChart
+                    :vpip-percentage="stat.vpip_percentage"
+                    :pfr-percentage="stat.pfr_percentage"
+                    :three-bet-percentage="stat.three_bet_percentage"
+                    :cbet-percentage="stat.cbet_percentage"
+                    :cbet-success-rate="stat.cbet_success_rate"
+                    :fold-to-cbet-percentage="stat.fold_to_cbet_percentage"
+                  />
+                </div>
+
+                <!-- Profit Trend -->
+                <div class="chart-wrapper">
+                  <ProfitTrendChart
+                    v-if="profitTrends[stat.id]"
+                    :profit-data="profitTrends[stat.id]"
+                  />
+                </div>
+
+                <!-- Key Metrics -->
+                <div class="metrics-grid">
+                  <div class="metric-item">
+                    <span class="metric-label">Total Profit</span>
+                    <span class="metric-value">${{ stat.total_profit.toLocaleString() }}</span>
+                  </div>
+                  <div class="metric-item">
+                    <span class="metric-label">Avg. Profit/Hand</span>
+                    <span class="metric-value">${{ stat.avg_profit_per_hand.toFixed(2) }}</span>
+                  </div>
+                  <div class="metric-item">
+                    <span class="metric-label">Flopzilla Accuracy</span>
+                    <span class="metric-value">{{ stat.flopzilla_accuracy.toFixed(1) }}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="action-buttons">
+            <button 
+              @click="refreshStats" 
+              :disabled="loading"
+              class="primary-btn"
+            >
+              Refresh Statistics
+            </button>
+            <button 
+              @click="exportStats" 
+              :disabled="loading"
+              class="secondary-btn"
+            >
+              Export Data
+            </button>
+          </div>
+        </section>
+
         <!-- System Info -->
         <section class="admin-section">
           <h2>시스템 정보</h2>
@@ -95,14 +285,21 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { useSupabaseClient } from '#imports'
 import { useAuth } from '../composables/useAuth'
 import { useProducts } from '../composables/useProducts'
 import { useWishlist } from '../composables/useWishlist'
+import { useMendezAI } from '../composables/useMendezAI'
+import { useMendezStats } from '../composables/useMendezStats'
+import type { PlayerProfile, User, Product, GameState } from '../../types/mendez.types'
+import type { Database } from '../../types/supabase.types'
+import WinRateChart from '../components/charts/WinRateChart.vue'
+import BettingStatsChart from '../components/charts/BettingStatsChart.vue'
+import ProfitTrendChart from '../components/charts/ProfitTrendChart.vue'
 
 const { user } = useAuth()
-const supabase = useSupabaseClient()
+const supabase = useSupabaseClient<Database>()
 const router = useRouter()
 const loading = ref(false)
 const { products } = useProducts()
@@ -127,12 +324,69 @@ const version = '1.0.0'
 
 // Database stats
 const wishlistCount = computed(() => wishlistItems.value.length)
-const users = ref([])
+const users = ref<User[]>([])
+
+// Mendez bot state
+const botEnabled = ref(false)
+const flopzillaConnected = ref(false)
+const openAIConnected = ref(false)
+const gameState = ref<GameState>({
+  currentHand: null,
+  position: 'Button',
+  stackSize: 100,
+  potSize: 3,
+  lastAction: null,
+  suggestedMove: null,
+  aiSuggestion: null
+})
+
+const trackedPlayers = ref<PlayerProfile[]>([
+  {
+    name: 'Player1',
+    style: 'Aggressive',
+    aggressive: 65,
+    passive: 35,
+    totalHands: 100,
+    recentActions: ['raise', 'raise', 'call', 'fold']
+  },
+  {
+    name: 'Player2',
+    style: 'Passive',
+    aggressive: 25,
+    passive: 75,
+    totalHands: 85,
+    recentActions: ['call', 'fold', 'call', 'check']
+  }
+])
+
+// Initialize Mendez AI
+const { 
+  analyzeOpponent, 
+  suggestHandStrategy, 
+  validateConnection,
+  loading: aiLoading,
+  error: aiError 
+} = useMendezAI()
+
+// Initialize Mendez Stats
+const { 
+  detailedStats,
+  loading: statsLoading,
+  error: statsError,
+  fetchDetailedStats,
+  getProfitTrend
+} = useMendezStats()
+
+const profitTrends = ref<Record<string, any>>({})
 
 // Fetch initial data
 onMounted(async () => {
   if (isAuthorized.value) {
-    await fetchUsers()
+    await Promise.all([
+      fetchUsers(),
+      fetchDetailedStats()
+    ])
+    await loadProfitTrends()
   }
 })
 
@@ -142,9 +396,7 @@ const resetDatabase = async () => {
   
   loading.value = true
   try {
-    // Delete all wishlist items
     await supabase.from('wishlist_items').delete().neq('id', 0)
-    // Delete all products
     await supabase.from('products').delete().neq('id', 0)
     await refreshData()
   } catch (error) {
@@ -157,8 +409,19 @@ const resetDatabase = async () => {
 const reinsertSampleData = async () => {
   loading.value = true
   try {
-    // Insert sample products
-    const { error } = await supabase.from('products').insert(products)
+    const productsToInsert = products.map(p => ({
+      name: p.name,
+      brand: p.brand,
+      price: p.price,
+      image: p.image,
+      category: p.category,
+      tags: p.tags,
+      popularity: p.popularity
+    }))
+
+    const { error } = await supabase
+      .from('products')
+      .insert(productsToInsert)
     if (error) throw error
     await refreshData()
   } catch (error) {
@@ -173,16 +436,15 @@ const fetchUsers = async () => {
   try {
     const { data, error } = await supabase.auth.admin.listUsers()
     if (error) throw error
-    users.value = data
+    users.value = data.users as User[]
   } catch (error) {
     console.error('Error fetching users:', error)
   }
 }
 
-const resetUserPassword = async (userId) => {
+const resetUserPassword = async (userId: string) => {
   loading.value = true
   try {
-    // In a real app, you would implement password reset logic here
     console.log('Reset password for user:', userId)
   } catch (error) {
     console.error('Error resetting password:', error)
@@ -191,7 +453,7 @@ const resetUserPassword = async (userId) => {
   }
 }
 
-const deleteUser = async (userId) => {
+const deleteUser = async (userId: string) => {
   if (!confirm('정말 이 사용자를 삭제하시겠습니까?')) return
 
   loading.value = true
@@ -241,12 +503,149 @@ const refreshData = async () => {
   ])
 }
 
-const formatDate = (dateString) => {
+const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString('ko-KR', {
     year: 'numeric',
     month: 'long',
     day: 'numeric'
   })
+}
+
+// Mendez bot functions
+const toggleBot = () => {
+  botEnabled.value = !botEnabled.value
+}
+
+const testFlopzillaConnection = async () => {
+  loading.value = true
+  try {
+    // TODO: Implement actual Flopzilla connection test
+    flopzillaConnected.value = true
+  } catch (error) {
+    console.error('Error connecting to Flopzilla:', error)
+    flopzillaConnected.value = false
+  } finally {
+    loading.value = false
+  }
+}
+
+const testOpenAIConnection = async () => {
+  loading.value = true
+  try {
+    openAIConnected.value = await validateConnection()
+  } catch (error) {
+    console.error('Error connecting to OpenAI:', error)
+    openAIConnected.value = false
+  } finally {
+    loading.value = false
+  }
+}
+
+const resetPlayerStats = async (playerName: string) => {
+  const playerIndex = trackedPlayers.value.findIndex(p => p.name === playerName)
+  if (playerIndex !== -1 && trackedPlayers.value[playerIndex]) {
+    const currentPlayer = trackedPlayers.value[playerIndex]
+    if (currentPlayer) {
+      trackedPlayers.value[playerIndex] = {
+        name: currentPlayer.name,
+        style: currentPlayer.style,
+        aggressive: 50,
+        passive: 50,
+        totalHands: 0,
+        recentActions: []
+      }
+    }
+  }
+}
+
+const updateGameState = async (
+  hand: string, 
+  position: string = 'Button', 
+  stackSize: number = 100,
+  potSize: number = 3
+) => {
+  if (!openAIConnected.value) {
+    console.error('OpenAI not connected')
+    return
+  }
+
+  gameState.value.currentHand = hand
+  gameState.value.position = position
+  gameState.value.stackSize = stackSize
+  gameState.value.potSize = potSize
+  
+  // Get current opponent
+  const opponent = trackedPlayers.value[0]
+  if (!opponent) return
+  
+  // Get AI suggestion for opponent adaptation
+  const analysis = await analyzeOpponent(opponent)
+  if (analysis) {
+    gameState.value.aiSuggestion = analysis
+  }
+  
+  // Get hand strategy
+  const strategy = await suggestHandStrategy(
+    hand,
+    position,
+    opponent.style,
+    stackSize,
+    potSize
+  )
+  if (strategy) {
+    gameState.value.suggestedMove = strategy
+  }
+}
+
+const clearGameState = () => {
+  gameState.value = {
+    currentHand: null,
+    position: 'Button',
+    stackSize: 100,
+    potSize: 3,
+    lastAction: null,
+    suggestedMove: null,
+    aiSuggestion: null
+  }
+}
+
+const exportPlayerData = () => {
+  const data = JSON.stringify(trackedPlayers.value, null, 2)
+  const blob = new Blob([data], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'mendez-player-data.json'
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+const refreshStats = async () => {
+  await fetchDetailedStats()
+  await loadProfitTrends()
+}
+
+const loadProfitTrends = async () => {
+  for (const stat of detailedStats.value) {
+    const trend = await getProfitTrend(stat.id)
+    if (trend) {
+      profitTrends.value[stat.id] = trend
+    }
+  }
+}
+
+const exportStats = () => {
+  const data = {
+    detailedStats: detailedStats.value,
+    profitTrends: profitTrends.value
+  }
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'mendez-statistics.json'
+  a.click()
+  URL.revokeObjectURL(url)
 }
 </script>
 
@@ -415,5 +814,129 @@ button:disabled {
   .user-actions button {
     width: 100%;
   }
+}
+
+.bot-status {
+  margin-bottom: 2rem;
+}
+
+.status-active {
+  color: #4CAF50;
+  font-weight: bold;
+}
+
+.status-inactive {
+  color: #f44336;
+  font-weight: bold;
+}
+
+.integration-status {
+  margin-bottom: 2rem;
+}
+
+.player-tracking {
+  margin-bottom: 2rem;
+}
+
+.player-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.player-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: #f5f5f5;
+  border-radius: 4px;
+}
+
+.game-state {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: #f5f5f5;
+  border-radius: 4px;
+}
+
+.state-info {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.error-message {
+  color: #f44336;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.test-controls {
+  margin-top: 1rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.stats-card {
+  background: #f8f8f8;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.stats-content {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.chart-wrapper {
+  background: white;
+  padding: 1rem;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.metric-item {
+  background: white;
+  padding: 1rem;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.metric-label {
+  display: block;
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 0.5rem;
+}
+
+.metric-value {
+  display: block;
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: var(--primary-color);
 }
 </style> 

@@ -3,7 +3,6 @@ export default defineNuxtConfig({
   // https://nuxt.com/modules
   modules: [
     '@nuxthub/core',
-    '@nuxt/eslint',
     '@nuxtjs/supabase'
   ],
 
@@ -12,6 +11,8 @@ export default defineNuxtConfig({
 
   // Supabase configuration
   supabase: {
+    url: process.env.SUPABASE_URL,
+    key: process.env.SUPABASE_KEY,
     redirectOptions: {
       login: '/auth/login',
       callback: '/confirm',
@@ -19,11 +20,12 @@ export default defineNuxtConfig({
     }
   },
 
-  // Env variables - https://nuxt.com/docs/getting-started/configuration#environment-variables-and-private-tokens
+  // Env variables
   runtimeConfig: {
+    openaiApiKey: process.env.NUXT_OPENAI_API_KEY,
     public: {
-      // Can be overridden by NUXT_PUBLIC_HELLO_TEXT environment variable
-      helloText: 'Hello World!'
+      supabaseUrl: process.env.SUPABASE_URL,
+      supabaseKey: process.env.SUPABASE_KEY
     }
   },
 

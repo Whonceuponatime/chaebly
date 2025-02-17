@@ -96,13 +96,6 @@
         </div>
       </div>
     </div>
-
-    <ValentineBox 
-      v-if="showValentineBox" 
-      :show="showValentineBox"
-      :message="valentineMessage"
-      @close="showValentineBox = false"
-    />
   </div>
 </template>
 
@@ -112,7 +105,6 @@ import { useAuth } from '~/composables/useAuth'
 import { useWishlist } from '~/composables/useWishlist'
 import { useProducts } from '../composables/useProducts'
 import SlidingBanner from '../components/SlidingBanner.vue'
-import ValentineBox from '../components/ValentineBox.vue'
 
 const route = useRoute()
 const { user } = useAuth()
@@ -121,8 +113,6 @@ const { products } = useProducts()
 const selectedCategories = ref([])
 const selectedPriceRanges = ref([])
 const sortBy = ref('newest')
-const showValentineBox = ref(false)
-const valentineMessage = ref('')
 
 const categoryMapping = {
   'top': '상의',
@@ -219,8 +209,6 @@ const handleWishlist = async (product) => {
 
   // Check if it's the second item (플라워 패턴 원피스)
   if (product.id === 2) {
-    valentineMessage.value = '플라워 패턴 원피스를 위시리스트에 담았어요! 💝\n데이트할 때 입으면 예쁠 것 같아요~'
-    showValentineBox.value = true
   }
 
   if (isInWishlist(product.id)) {

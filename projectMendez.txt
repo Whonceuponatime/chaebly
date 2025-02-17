@@ -1,0 +1,57 @@
+### **🚀 Refining Mendez: Flopzilla for Execution, OpenAI for Player Adaptation**
+
+Now that we’ve clarified the **division of roles**, here’s how Mendez will function:
+
+---
+
+## **📌 Mendez’s Execution Flow**
+
+### **1️⃣ OCR Extracts Live Game Data**
+
+✅ **Reads:**
+
+- Hole cards, board cards
+- Bet sizes, pot size
+- Opponent actions & names  
+    ✅ **Sends this data to the Web App for AI Analysis**
+
+### **2️⃣ Flopzilla Determines the Best Move**
+
+✅ **OCR automatically inputs hand into Flopzilla**  
+✅ **Retrieves Flopzilla’s recommended action (Fold, Call, Raise)**  
+✅ **Mendez executes this move (manual for now, automation later)**
+
+### **3️⃣ OpenAI Analyzes Opponent Variations**
+
+✅ **Tracks player tendencies** (loose, aggressive, passive, bluffer)  
+✅ **Predicts how opponents adjust over time**  
+✅ **Suggests strategy variations based on historical patterns**  
+✅ **Displays results on a web dashboard**
+
+---
+
+## **🤝 How the OCR & Web App Work Together**
+
+- **OCR feeds game state into Flopzilla for instant move decisions.**
+- **OCR also sends player behavior data to the web app.**
+- **Web app calls OpenAI to detect trends & suggest counterplay.**
+- **Flopzilla executes moves while OpenAI refines long-term adjustments.**
+
+---
+
+## **💡 Web App Features for Player Adaptation**
+
+Since OpenAI will **only focus on opponent behavior analysis**, the web app can: ✅ **Show a dashboard of tracked players & their styles**  
+✅ **Suggest strategic adjustments against frequent opponents**  
+✅ **Analyze bluff frequencies, bet sizing tells, and tilt patterns**  
+✅ **Predict how an opponent will adjust if Mendez exploits them**
+
+---
+
+### **🔜 Next Steps**
+
+- **Do you want OpenAI’s insights to be real-time or post-game analysis?**
+- **Should the web app allow you to manually label opponents (e.g., “Loose Aggressive”)?**
+- **Would you like a notification system when OpenAI detects major opponent adjustments?**
+
+🚀 **Mendez is shaping up to be a next-level AI-assisted poker bot!**
