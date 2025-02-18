@@ -11,12 +11,11 @@ export default defineNuxtConfig({
 
   // Supabase configuration
   supabase: {
-    url: process.env.SUPABASE_URL,
-    key: process.env.SUPABASE_KEY,
+    redirect: false,
     redirectOptions: {
-      login: '/auth/login',
-      callback: '/confirm',
-      exclude: ['/auth/register', '/auth/reset-password'],
+      login: '/admin',
+      callback: '/admin',
+      exclude: [],
     }
   },
 

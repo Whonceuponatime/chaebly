@@ -1,96 +1,78 @@
 <template>
-  <div class="chart-container">
-    <Bar
-      v-if="chartData"
-      :data="chartData"
-      :options="chartOptions"
-    />
+  <div class="h-64">
+    <canvas ref="chartRef"></canvas>
   </div>
 </template>
 
 <script setup lang="ts">
-import { Bar } from 'vue-chartjs'
-import {
-  Chart as ChartJS,
-  Title,
-  Tooltip,
-  Legend,
-  BarElement,
-  CategoryScale,
-  LinearScale
-} from 'chart.js'
-
-ChartJS.register(
-  Title,
-  Tooltip,
-  Legend,
-  BarElement,
-  CategoryScale,
-  LinearScale
-)
+import { ref, onMounted, watch } from 'vue'
+import Chart from 'chart.js/auto'
+import type { BettingStatsData } from '@/types/mendez.types'
 
 const props = defineProps<{
-  vpipPercentage: number
-  pfrPercentage: number
-  threeBetPercentage: number
-  cbetPercentage: number
-  cbetSuccessRate: number
-  foldToCbetPercentage: number
+  data: BettingStatsData
 }>()
 
-const chartData = computed(() => ({
-  labels: ['VPIP', 'PFR', '3-Bet', 'C-Bet', 'C-Bet Success', 'Fold to C-Bet'],
-  datasets: [
-    {
-      label: 'Percentage %',
-      data: [
-        props.vpipPercentage,
-        props.pfrPercentage,
-        props.threeBetPercentage,
-        props.cbetPercentage,
-        props.cbetSuccessRate,
-        props.foldToCbetPercentage
-      ],
-      backgroundColor: [
-        'rgba(255, 99, 132, 0.5)',
-        'rgba(54, 162, 235, 0.5)',
-        'rgba(255, 206, 86, 0.5)',
-        'rgba(75, 192, 192, 0.5)',
-        'rgba(153, 102, 255, 0.5)',
-        'rgba(255, 159, 64, 0.5)'
-      ],
-      borderColor: [
-        'rgb(255, 99, 132)',
-        'rgb(54, 162, 235)',
-        'rgb(255, 206, 86)',
-        'rgb(75, 192, 192)',
-        'rgb(153, 102, 255)',
-        'rgb(255, 159, 64)'
-      ],
-      borderWidth: 1
-    }
-  ]
-}))
+const chartRef = ref<HTMLCanvasElement | null>(null)
+let chart: Chart | null = null
 
-const chartOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      display: true
-    },
-    title: {
-      display: true,
-      text: 'Betting Statistics'
-    }
-  },
-  scales: {
-    y: {
-      beginAtZero: true,
-      max: 100
-    }
+const createChart = () => {
+  if (!chartRef.value) return
+
+  const ctx = chartRef.value.getContext('2d')
+  if (!ctx) return
+
+  const total = props.data.fold + props.data.call + props.data.raise
+  const percentages = {
+    fold: Math.round((props.data.fold / total) * 100) || 0,
+    call: Math.round((props.data.call / total) * 100) || 0,
+    raise: Math.round((props.data.raise / total) * 100) || 0
   }
+
+  chart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Fold', 'Call', 'Raise'],
+      datasets: [{
+        data: [percentages.fold, percentages.call, percentages.raise],
+        backgroundColor: [
+          '#ef4444', // red for fold
+          '#3b82f6', // blue for call
+          '#22c55e', // green for raise
+        ]
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom'
+        },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              const label = context.label || ''
+              const value = context.parsed || 0
+              return `${label}: ${value}%`
+            }
+          }
+        }
+      }
+    }
+  })
 }
+
+onMounted(() => {
+  createChart()
+})
+
+watch(() => props.data, () => {
+  if (chart) {
+    chart.destroy()
+  }
+  createChart()
+}, { deep: true })
 </script>
 
 <style scoped>

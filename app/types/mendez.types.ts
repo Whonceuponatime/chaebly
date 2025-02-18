@@ -46,4 +46,39 @@ export interface PlayerProfile {
   passive: number
   totalHands: number
   recentActions: string[]
+}
+
+export interface MendezGame {
+  id: string
+  created_at: string
+  player_name: string
+  hand_cards: string
+  board_cards: string
+  pot_size: number
+  bet_size: number
+  action_taken: string
+  flopzilla_recommendation: string
+  result: string
+  profit_loss: number
+}
+
+export interface MendezPlayerAnalysis {
+  id: string
+  game_id: string
+  player_name: string
+  playing_style: string
+  tendencies: string[]
+  adjustment_suggestions: string[]
+  created_at: string
+}
+
+export interface ProfitTrendData {
+  hand: number
+  profit: number
+}
+
+export interface BettingStatsData {
+  fold: number
+  call: number
+  raise: number
 } 

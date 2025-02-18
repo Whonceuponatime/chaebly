@@ -1,87 +1,75 @@
 <template>
-  <div class="chart-container">
-    <Line
-      v-if="chartData"
-      :data="chartData"
-      :options="chartOptions"
-    />
+  <div class="h-64">
+    <canvas ref="chartRef"></canvas>
   </div>
 </template>
 
 <script setup lang="ts">
-import { Line } from 'vue-chartjs'
-import {
-  Chart as ChartJS,
-  Title,
-  Tooltip,
-  Legend,
-  LineElement,
-  LinearScale,
-  PointElement,
-  CategoryScale,
-} from 'chart.js'
-import { computed } from 'vue'
-import type { MendezHandStats } from '../../types/mendez.types'
-
-ChartJS.register(
-  Title,
-  Tooltip,
-  Legend,
-  LineElement,
-  LinearScale,
-  PointElement,
-  CategoryScale
-)
-
-interface ProfitData {
-  created_at: string
-  won_amount: number
-}
+import { ref, onMounted, watch } from 'vue'
+import Chart from 'chart.js/auto'
+import type { ProfitTrendData } from '@/types/mendez.types'
 
 const props = defineProps<{
-  profitData: ProfitData[]
+  data: ProfitTrendData[]
 }>()
 
-const chartData = computed(() => {
-  const dates = props.profitData.map(d => new Date(d.created_at).toLocaleDateString())
-  let runningTotal = 0
-  const cumulativeProfit = props.profitData.map(d => {
-    runningTotal += d.won_amount
-    return runningTotal
-  })
+const chartRef = ref<HTMLCanvasElement | null>(null)
+let chart: Chart | null = null
 
-  return {
-    labels: dates,
-    datasets: [
-      {
-        label: 'Cumulative Profit',
-        data: cumulativeProfit,
-        borderColor: 'rgb(75, 192, 192)',
-        tension: 0.1,
-        fill: false
+const createChart = () => {
+  if (!chartRef.value) return
+
+  const ctx = chartRef.value.getContext('2d')
+  if (!ctx) return
+
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: props.data.map(d => `Hand ${d.hand}`),
+      datasets: [{
+        label: 'Profit/Loss',
+        data: props.data.map(d => d.profit),
+        borderColor: '#3b82f6',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        fill: true,
+        tension: 0.4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: {
+            color: 'rgba(0, 0, 0, 0.1)'
+          }
+        },
+        x: {
+          grid: {
+            display: false
+          }
+        }
+      },
+      plugins: {
+        legend: {
+          display: false
+        }
       }
-    ]
-  }
+    }
+  })
+}
+
+onMounted(() => {
+  createChart()
 })
 
-const chartOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      display: true
-    },
-    title: {
-      display: true,
-      text: 'Profit Trend'
-    }
-  },
-  scales: {
-    y: {
-      beginAtZero: true
-    }
+watch(() => props.data, () => {
+  if (chart) {
+    chart.destroy()
   }
-}
+  createChart()
+}, { deep: true })
 </script>
 
 <style scoped>
