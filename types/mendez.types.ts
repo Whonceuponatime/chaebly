@@ -56,4 +56,57 @@ export interface MendezDetailedStats {
   btn_win_rate: number
   sb_win_rate: number
   bb_win_rate: number
+}
+
+export interface MendezGame {
+  id?: string
+  created_at?: string
+  hand_id: string
+  street: 'preflop' | 'flop' | 'turn' | 'river'
+  players: string[]
+  hero_position: string
+  hero_cards: string
+  board_cards?: string | null
+  pot_size_bb: number
+  to_call_bb: number
+  current_bet_bb: number
+  active_players: string[]
+  action_on: string
+  last_action?: string | null
+  last_bet_size_bb?: number | null
+  player_stacks: Record<string, number>
+  effective_stack: number
+  gpt_decision: string
+  decision_reasoning: string
+}
+
+export interface MendezPayload {
+  handId: string
+  street: 'preflop' | 'flop' | 'turn' | 'river'
+  players: string[]
+  heroPosition: string
+  heroCards: string
+  boardCards?: string | null
+  potSize: number
+  toCall: number
+  currentBet: number
+  activePlayers: string[]
+  actionOn: string
+  lastAction?: string | null
+  lastBetSize?: number | null
+  playerStacks: Record<string, number>
+  effectiveStack: number
+}
+
+// Database types
+export type Database = {
+  public: {
+    Tables: {
+      mendez_games: {
+        Row: MendezGame
+        Insert: MendezGame
+        Update: Partial<MendezGame>
+      }
+    }
+  }
 } 

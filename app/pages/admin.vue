@@ -20,113 +20,109 @@
         <p>Loading data...</p>
       </div>
       
-      <div class="admin-sections">
-        <!-- Statistics Overview -->
-        <section class="admin-section">
-          <h2>Overview</h2>
-          <div class="stats-grid">
-            <div class="stat-item">
-              <h3>Total Games</h3>
-              <p class="stat-value">{{ mendezGames.length }}</p>
-            </div>
-            <div class="stat-item">
-              <h3>Total Profit/Loss</h3>
-              <p class="stat-value" :class="totalProfit >= 0 ? 'text-green-600' : 'text-red-600'">
-                {{ totalProfit }}BB
-              </p>
-            </div>
-            <div class="stat-item">
-              <h3>Win Rate</h3>
-              <p class="stat-value">{{ winRate }}%</p>
-            </div>
-            <div class="stat-item">
-              <h3>Total Players Tracked</h3>
-              <p class="stat-value">{{ playerHistories.length }}</p>
-            </div>
+      <!-- Basic Stats Overview -->
+      <section class="admin-section mb-8">
+        <h2>Overview</h2>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <h3>Total Games</h3>
+            <p class="stat-value">{{ mendezGames.length }}</p>
           </div>
-        </section>
+          <div class="stat-item">
+            <h3>Total Profit/Loss</h3>
+            <p class="stat-value" :class="totalProfit >= 0 ? 'text-green-600' : 'text-red-600'">
+              {{ totalProfit }}BB
+            </p>
+          </div>
+          <div class="stat-item">
+            <h3>Win Rate</h3>
+            <p class="stat-value">{{ winRate }}%</p>
+          </div>
+          <div class="stat-item">
+            <h3>Total Players Tracked</h3>
+            <p class="stat-value">{{ playerHistories.length }}</p>
+          </div>
+        </div>
+      </section>
 
-        <!-- Charts -->
-        <section class="admin-section">
-          <h2>Statistics</h2>
-          <div class="charts-grid">
-            <div class="chart-container">
-              <h3>Profit Trend</h3>
-              <ProfitTrendChart :data="profitTrendData" />
-            </div>
-            <div class="chart-container">
-              <h3>Betting Actions</h3>
-              <BettingStatsChart :data="bettingStats" />
-            </div>
-          </div>
-        </section>
+      <!-- Auto-refresh controls -->
+      <div class="flex items-center gap-2 mb-4">
+        <button 
+          @click="refreshData" 
+          class="refresh-btn"
+          :disabled="loading"
+        >
+          Refresh Data
+        </button>
+        <div class="flex items-center gap-2">
+          <label class="text-sm text-gray-600">Auto-refresh:</label>
+          <input
+            type="checkbox"
+            v-model="isAutoRefreshEnabled"
+            @change="isAutoRefreshEnabled ? startAutoRefresh() : stopAutoRefresh()"
+            class="form-checkbox h-4 w-4 text-blue-600"
+          >
+        </div>
+      </div>
 
-        <!-- Detailed Street Statistics -->
-        <section class="admin-section">
-          <div class="header-actions">
-            <h2>Street & Position Statistics</h2>
-            <button 
-              @click="exportStats" 
-              class="export-btn"
-              :disabled="loading"
-            >
-              Export Statistics
-            </button>
+      <!-- Recent Games Table -->
+      <section class="admin-section">
+        <div class="header-actions">
+          <div class="flex items-center gap-2">
+            <h2>Hand History</h2>
           </div>
-          <div class="stats-tabs">
-            <button 
-              v-for="street in ['all', 'preflop', 'flop', 'turn', 'river']" 
-              :key="street"
-              @click="currentStreet = street"
-              :class="{ active: currentStreet === street }"
-              class="tab-btn"
-            >
-              {{ street === 'all' ? 'All Streets' : street.charAt(0).toUpperCase() + street.slice(1) }}
-            </button>
-          </div>
-          
-          <div class="street-stats">
-            <div v-for="position in positions" :key="position" class="position-card">
-              <h3>{{ position }}</h3>
-              <div class="stat-details">
-                <div class="stat-row">
-                  <span>Total Hands:</span>
-                  <span>{{ getPositionStats(position, currentStreet).total }}</span>
-                </div>
-                <div class="stat-row">
-                  <span>Win Rate:</span>
-                  <span>{{ formatPercentage(getPositionStats(position, currentStreet).winRate) }}</span>
-                </div>
-                <div class="stat-row">
-                  <span>3-Bet Success:</span>
-                  <span>{{ formatPercentage(getPositionStats(position, currentStreet).threeBetSuccess) }}</span>
-                </div>
-                <div class="stat-row">
-                  <span>C-Bet Success:</span>
-                  <span>{{ formatPercentage(getPositionStats(position, currentStreet).cBetSuccess) }}</span>
-                </div>
-                <div class="stat-row">
-                  <span>Avg. Pot Size Won:</span>
-                  <span>{{ formatNumber(getPositionStats(position, currentStreet).avgPotSizeWon) }}BB</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Street</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Position</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hand</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Board</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">GPT</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reasoning</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Final</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pot Size</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Result</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <tr v-for="game in mendezGames" :key="game.id">
+                <td class="px-6 py-4 whitespace-nowrap text-sm capitalize">{{ game.street }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm">{{ game.hero_position }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-mono">{{ game.hero_cards }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-mono">{{ game.board_cards || '-' }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm">{{ game.gpt_decision }}</td>
+                <td class="px-6 py-4 text-sm max-w-md">{{ game.decision_reasoning || '-' }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm">{{ game.final_action || '-' }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm">{{ game.pot_size_bb }}BB</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm" 
+                    :class="game.final_action === 'fold' ? 'text-red-600' : game.pot_size_bb > 0 ? 'text-green-600' : 'text-red-600'">
+                  {{ game.final_action === 'fold' ? 'Fold' : game.pot_size_bb > 0 ? 'Win' : 'Loss' }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
 
-        <!-- Player History -->
-        <section class="admin-section">
-          <div class="header-actions">
+      <!-- Player History -->
+      <section class="admin-section mt-8">
+        <div class="header-actions">
+          <div class="flex items-center gap-2">
             <h2>Player History</h2>
             <button 
-              @click="refreshData" 
-              class="refresh-btn"
-              :disabled="loading"
+              @click="isPlayerHistoryExpanded = !isPlayerHistoryExpanded"
+              class="expand-btn"
+              :aria-label="isPlayerHistoryExpanded ? 'Collapse player history' : 'Expand player history'"
             >
-              Refresh Data
+              {{ isPlayerHistoryExpanded ? '▼' : '▶' }}
             </button>
           </div>
-          <div class="overflow-x-auto">
+        </div>
+        <Transition name="expand">
+          <div v-show="isPlayerHistoryExpanded" class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
               <thead class="bg-gray-50">
                 <tr>
@@ -154,43 +150,8 @@
               </tbody>
             </table>
           </div>
-        </section>
-
-        <!-- Recent Games Table -->
-        <section class="admin-section">
-          <div class="header-actions">
-            <h2>Recent Games</h2>
-          </div>
-          <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-              <thead class="bg-gray-50">
-                <tr>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time</th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Street</th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Position</th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hand</th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Board</th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pot Size</th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mendez Rec</th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
-                </tr>
-              </thead>
-              <tbody class="bg-white divide-y divide-gray-200">
-                <tr v-for="game in mendezGames" :key="game.id">
-                  <td class="px-6 py-4 whitespace-nowrap text-sm">{{ formatDate(game.created_at) }}</td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm capitalize">{{ game.street }}</td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm">{{ game.hero_position }}</td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm font-mono">{{ game.hero_cards }}</td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm font-mono">{{ game.board_cards || '-' }}</td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm">{{ game.pot_size_bb }}BB</td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm">{{ game.mendez_recommendation }}</td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm">{{ game.final_action || '-' }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
-      </div>
+        </Transition>
+      </section>
     </div>
   </div>
 </template>
@@ -199,9 +160,6 @@
 import { useSupabaseClient } from '#imports'
 import { useAuth } from '../composables/useAuth'
 import type { Database } from '../../types/supabase.types'
-import ProfitTrendChart from '../components/charts/ProfitTrendChart.vue'
-import BettingStatsChart from '../components/charts/BettingStatsChart.vue'
-import type { ProfitTrendData, BettingStatsData } from '../types/mendez.types'
 
 interface MendezGame {
   id: string
@@ -214,10 +172,11 @@ interface MendezGame {
   pot_size_bb: number
   to_call_bb: number
   current_bet_bb: number
-  mendez_recommendation: string
+  gpt_decision?: string | null
   final_action?: string
   last_action?: string
   last_bet_size_bb?: number
+  decision_reasoning?: string
 }
 
 interface PlayerHistory {
@@ -232,21 +191,6 @@ interface PlayerHistory {
   last_seen_at: string
 }
 
-// Add new interfaces for statistics
-interface PositionStats {
-  total: number
-  wins: number
-  threeBets: number
-  threeBetWins: number
-  cBets: number
-  cBetWins: number
-  totalPotWon: number
-  winRate: number
-  threeBetSuccess: number
-  cBetSuccess: number
-  avgPotSizeWon: number
-}
-
 const { user } = useAuth()
 const supabase = useSupabaseClient<Database>()
 const router = useRouter()
@@ -254,53 +198,29 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 const mendezGames = ref<MendezGame[]>([])
 const playerHistories = ref<PlayerHistory[]>([])
-
-// Add new refs and constants
-const currentStreet = ref('all')
-const positions = ['BTN', 'CO', 'MP', 'UTG', 'SB', 'BB']
-
-// Statistics data
-const profitTrendData = computed<ProfitTrendData[]>(() => {
-  return mendezGames.value.map((game, index) => ({
-    hand: index + 1,
-    profit: game.pot_size_bb
-  })).reverse()
-})
-
-const bettingStats = computed<BettingStatsData>(() => {
-  const stats = mendezGames.value.reduce((acc, game) => {
-    if (game.final_action === 'fold') acc.fold++
-    else if (game.final_action === 'call') acc.call++
-    else if (game.final_action === 'raise') acc.raise++
-    return acc
-  }, { fold: 0, call: 0, raise: 0 })
-  return stats
-})
+const isPlayerHistoryExpanded = ref(false)
 
 const totalProfit = computed(() => {
   return mendezGames.value.reduce((sum, game) => sum + game.pot_size_bb, 0)
 })
 
 const winRate = computed(() => {
-  const wins = mendezGames.value.filter(game => game.pot_size_bb > 0).length
-  return mendezGames.value.length > 0 
-    ? ((wins / mendezGames.value.length) * 100).toFixed(1) 
-    : '0'
+  const completedGames = mendezGames.value.filter(game => game.final_action)
+  if (completedGames.length === 0) return '0'
+  const wins = completedGames.filter(game => game.pot_size_bb > 0).length
+  return ((wins / completedGames.length) * 100).toFixed(1)
 })
 
-// Admin authorization
 const isAuthorized = computed(() => {
   return user.value?.email === 'taebaek@gmail.com'
 })
 
-// Redirect if not authorized
 watchEffect(() => {
   if (user.value && !isAuthorized.value) {
     router.push('/')
   }
 })
 
-// Fetch data functions
 const refreshMendezGames = async () => {
   loading.value = true
   error.value = null
@@ -309,7 +229,6 @@ const refreshMendezGames = async () => {
       .from('mendez_games')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(50)
 
     if (dbError) throw dbError
     mendezGames.value = data || []
@@ -347,7 +266,6 @@ const refreshData = async () => {
   ])
 }
 
-// Formatting helpers
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleString()
 }
@@ -360,93 +278,74 @@ const formatNumber = (value: number) => {
   return value.toFixed(2)
 }
 
-// Add new function to handle statistics export
-const exportStats = () => {
-  // Prepare data for export
-  const exportData = {
-    overview: {
-      totalGames: mendezGames.value.length,
-      totalProfit: totalProfit.value,
-      winRate: winRate.value,
-      totalPlayers: playerHistories.value.length
-    },
-    streetStats: {} as Record<string, any>,
-    playerStats: playerHistories.value.map(player => ({
-      name: player.player_name,
-      totalHands: player.total_hands,
-      showdowns: player.showdown_hands,
-      handsWon: player.hands_won,
-      vpipPercentage: player.vpip_percentage,
-      pfrPercentage: player.pfr_percentage,
-      aggressionFactor: player.aggression_factor
-    }))
-  }
+const autoRefreshInterval = ref<NodeJS.Timeout | null>(null)
+const isAutoRefreshEnabled = ref(false)
 
-  // Get stats for each street
-  for (const street of ['all', 'preflop', 'flop', 'turn', 'river']) {
-    exportData.streetStats[street] = {}
-    for (const position of positions) {
-      exportData.streetStats[street][position] = getPositionStats(position, street)
+function startAutoRefresh(intervalMs = 5000) {
+  if (autoRefreshInterval.value) {
+    clearInterval(autoRefreshInterval.value)
+  }
+  autoRefreshInterval.value = setInterval(async () => {
+    if (!loading.value) {
+      await refreshData()
     }
-  }
-
-  // Convert to CSV or JSON
-  const jsonString = JSON.stringify(exportData, null, 2)
-  const blob = new Blob([jsonString], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  
-  // Create download link
-  const link = document.createElement('a')
-  link.href = url
-  link.download = `mendez_stats_${new Date().toISOString().split('T')[0]}.json`
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  URL.revokeObjectURL(url)
+  }, intervalMs)
 }
 
-// Update getPositionStats to handle 'all' street option
-const getPositionStats = (position: string, street: string) => {
-  const relevantGames = mendezGames.value.filter(game => 
-    game.hero_position === position && 
-    (street === 'all' || game.street === street)
-  )
-
-  const stats: PositionStats = {
-    total: relevantGames.length,
-    wins: relevantGames.filter(g => g.pot_size_bb > 0).length,
-    threeBets: relevantGames.filter(g => g.final_action === 'raise' && g.last_action === 'raise').length,
-    threeBetWins: relevantGames.filter(g => 
-      g.final_action === 'raise' && 
-      g.last_action === 'raise' && 
-      g.pot_size_bb > 0
-    ).length,
-    cBets: relevantGames.filter(g => g.final_action === 'raise' && !g.last_action).length,
-    cBetWins: relevantGames.filter(g => 
-      g.final_action === 'raise' && 
-      !g.last_action && 
-      g.pot_size_bb > 0
-    ).length,
-    totalPotWon: relevantGames.reduce((sum, g) => sum + (g.pot_size_bb > 0 ? g.pot_size_bb : 0), 0),
-    winRate: 0,
-    threeBetSuccess: 0,
-    cBetSuccess: 0,
-    avgPotSizeWon: 0
+function stopAutoRefresh() {
+  if (autoRefreshInterval.value) {
+    clearInterval(autoRefreshInterval.value)
+    autoRefreshInterval.value = null
   }
-
-  // Calculate percentages and averages
-  stats.winRate = stats.total > 0 ? (stats.wins / stats.total) * 100 : 0
-  stats.threeBetSuccess = stats.threeBets > 0 ? (stats.threeBetWins / stats.threeBets) * 100 : 0
-  stats.cBetSuccess = stats.cBets > 0 ? (stats.cBetWins / stats.cBets) * 100 : 0
-  stats.avgPotSizeWon = stats.wins > 0 ? stats.totalPotWon / stats.wins : 0
-
-  return stats
 }
 
-// Initial data load
+watch(loading, (newValue) => {
+  if (newValue) {
+    stopAutoRefresh()
+  } else if (isAutoRefreshEnabled.value) {
+    startAutoRefresh()
+  }
+})
+
 onMounted(async () => {
   if (isAuthorized.value) {
     await refreshData()
+    
+    const gamesSubscription = supabase
+      .channel('games_channel')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'mendez_games'
+        },
+        async () => {
+          await refreshMendezGames()
+        }
+      )
+      .subscribe()
+
+    const playerHistorySubscription = supabase
+      .channel('player_history_channel')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'mendez_player_history'
+        },
+        async () => {
+          await refreshPlayerHistories()
+        }
+      )
+      .subscribe()
+
+    onUnmounted(() => {
+      gamesSubscription.unsubscribe()
+      playerHistorySubscription.unsubscribe()
+      stopAutoRefresh()
+    })
   }
 })
 </script>
@@ -463,42 +362,11 @@ onMounted(async () => {
   padding: 4rem 2rem;
 }
 
-.unauthorized h1 {
-  color: #ff4e4e;
-  margin-bottom: 1rem;
-}
-
-.back-link {
-  display: inline-block;
-  margin-top: 2rem;
-  padding: 0.8rem 1.5rem;
-  background-color: var(--primary-color);
-  color: white;
-  text-decoration: none;
-  border-radius: 4px;
-}
-
-.admin-content h1 {
-  margin-bottom: 2rem;
-  color: #2d3748;
-}
-
-.admin-sections {
-  display: grid;
-  gap: 2rem;
-}
-
 .admin-section {
   background: white;
   padding: 1.5rem;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.admin-section h2 {
-  margin-bottom: 1.5rem;
-  color: #2d3748;
-  font-weight: 600;
 }
 
 .stats-grid {
@@ -512,36 +380,6 @@ onMounted(async () => {
   background: #f8fafc;
   border-radius: 8px;
   text-align: center;
-}
-
-.stat-item h3 {
-  color: #64748b;
-  font-size: 0.875rem;
-  margin-bottom: 0.5rem;
-}
-
-.stat-value {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #2d3748;
-}
-
-.charts-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 2rem;
-}
-
-.chart-container {
-  background: #f8fafc;
-  padding: 1rem;
-  border-radius: 8px;
-}
-
-.chart-container h3 {
-  margin-bottom: 1rem;
-  color: #64748b;
-  font-size: 0.875rem;
 }
 
 .header-actions {
@@ -560,101 +398,29 @@ onMounted(async () => {
   transition: background-color 0.2s;
 }
 
-.refresh-btn:hover {
-  background-color: #2563eb;
-}
-
-.refresh-btn:disabled {
-  background-color: #93c5fd;
-  cursor: not-allowed;
-}
-
-@media (max-width: 768px) {
-  .charts-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.stats-tabs {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.tab-btn {
-  padding: 0.5rem 1rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 0.5rem;
-  background: white;
+.expand-btn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
   color: #64748b;
+  background: transparent;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.tab-btn.active {
-  background: #3b82f6;
-  color: white;
-  border-color: #3b82f6;
+.expand-enter-active,
+.expand-leave-active {
+  transition: all 0.3s ease-in-out;
+  max-height: 1000px;
+  opacity: 1;
+  overflow: hidden;
 }
 
-.street-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1rem;
-}
-
-.position-card {
-  background: #f8fafc;
-  padding: 1rem;
-  border-radius: 0.5rem;
-  border: 1px solid #e2e8f0;
-}
-
-.position-card h3 {
-  color: #2d3748;
-  font-weight: 600;
-  margin-bottom: 1rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.stat-details {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.stat-row {
-  display: flex;
-  justify-content: space-between;
-  color: #4a5568;
-  font-size: 0.875rem;
-}
-
-.stat-row span:last-child {
-  font-weight: 500;
-}
-
-.export-btn {
-  padding: 0.5rem 1rem;
-  background-color: #10b981;
-  color: white;
-  border-radius: 4px;
-  font-size: 0.875rem;
-  transition: background-color 0.2s;
-  margin-left: 1rem;
-}
-
-.export-btn:hover {
-  background-color: #059669;
-}
-
-.export-btn:disabled {
-  background-color: #6ee7b7;
-  cursor: not-allowed;
+.expand-enter-from,
+.expand-leave-to {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
 }
 </style> 

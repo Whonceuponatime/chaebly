@@ -13,7 +13,6 @@
           <template v-if="user && user.email === 'taebaek@gmail.com'">
             <NuxtLink to="/wishlist" @click="isMobileMenuOpen = false">위시리스트</NuxtLink>
             <NuxtLink to="/mypage" @click="isMobileMenuOpen = false">마이페이지</NuxtLink>
-            <NuxtLink to="/admin/mendez" @click="isMobileMenuOpen = false">Mendez</NuxtLink>
           </template>
           <template v-if="!user">
             <NuxtLink to="/auth/login" @click="isMobileMenuOpen = false">로그인</NuxtLink>

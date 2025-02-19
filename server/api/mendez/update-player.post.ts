@@ -4,15 +4,19 @@ interface PlayerUpdate {
   playerName: string
   handInfo: {
     position: string
-    holeCards?: string  // Only included if went to showdown
     action: string
     betSize: number
     potSize: number
-    result: 'win' | 'lose' | 'fold'
+    result: 'win' | 'lose'
     profitLoss: number
     wentToShowdown: boolean
     vpipAction: boolean  // True if player voluntarily put money in pot
     pfrAction: boolean   // True if player raised preflop
+    isBluff: boolean    // True if the action was a bluff
+    lastAction: string  // Previous action in the hand
+    street: string     // Current street (preflop, flop, turn, river)
+    betSizeType: 'half_pot' | 'full_pot' | 'other'  // Type of bet sizing
+    holeCards?: string // Optional hole cards for showdown hands
   }
 }
 
@@ -38,6 +42,17 @@ interface PlayerStats {
     won: number
   }>
   last_seen_at: string
+  bb_per_100_hands: number
+  total_bluffs: number
+  successful_bluffs: number
+  check_raise_attempts: number
+  check_raise_success: number
+  turn_call_attempts: number
+  turn_call_success: number
+  half_pot_bets: number
+  half_pot_success: number
+  full_pot_bets: number
+  full_pot_success: number
 }
 
 async function getOrCreatePlayer(client: any, playerName: string) {
@@ -70,7 +85,18 @@ async function getOrCreatePlayer(client: any, playerName: string) {
       showdown_hands_history: [],
       betting_patterns: {},
       position_tendencies: {},
-      last_seen_at: new Date().toISOString()
+      last_seen_at: new Date().toISOString(),
+      bb_per_100_hands: 0,
+      total_bluffs: 0,
+      successful_bluffs: 0,
+      check_raise_attempts: 0,
+      check_raise_success: 0,
+      turn_call_attempts: 0,
+      turn_call_success: 0,
+      half_pot_bets: 0,
+      half_pot_success: 0,
+      full_pot_bets: 0,
+      full_pot_success: 0
     })
     .select()
     .single()
@@ -89,12 +115,23 @@ async function updatePlayerStats(client: any, player: any, update: PlayerUpdate)
     showdown_hands: player.showdown_hands + (handInfo.wentToShowdown ? 1 : 0),
     hands_won: player.hands_won + (handInfo.result === 'win' ? 1 : 0),
     aggression_factor: player.aggression_factor,
-    vpip_percentage: 0, // Will be calculated below
-    pfr_percentage: 0,  // Will be calculated below
+    vpip_percentage: 0,
+    pfr_percentage: 0,
     showdown_hands_history: [...player.showdown_hands_history],
     betting_patterns: { ...player.betting_patterns },
     position_tendencies: { ...player.position_tendencies },
-    last_seen_at: new Date().toISOString()
+    last_seen_at: new Date().toISOString(),
+    bb_per_100_hands: player.bb_per_100_hands,
+    total_bluffs: player.total_bluffs + (handInfo.isBluff ? 1 : 0),
+    successful_bluffs: player.successful_bluffs + (handInfo.isBluff && handInfo.result === 'win' ? 1 : 0),
+    check_raise_attempts: player.check_raise_attempts + (handInfo.action === 'raise' && handInfo.lastAction === 'check' ? 1 : 0),
+    check_raise_success: player.check_raise_success + (handInfo.action === 'raise' && handInfo.lastAction === 'check' && handInfo.result === 'win' ? 1 : 0),
+    turn_call_attempts: player.turn_call_attempts + (handInfo.street === 'turn' && handInfo.action === 'call' ? 1 : 0),
+    turn_call_success: player.turn_call_success + (handInfo.street === 'turn' && handInfo.action === 'call' && handInfo.result === 'win' ? 1 : 0),
+    half_pot_bets: player.half_pot_bets + (handInfo.betSizeType === 'half_pot' ? 1 : 0),
+    half_pot_success: player.half_pot_success + (handInfo.betSizeType === 'half_pot' && handInfo.result === 'win' ? 1 : 0),
+    full_pot_bets: player.full_pot_bets + (handInfo.betSizeType === 'full_pot' ? 1 : 0),
+    full_pot_success: player.full_pot_success + (handInfo.betSizeType === 'full_pot' && handInfo.result === 'win' ? 1 : 0)
   }
 
   // Update VPIP and PFR percentages
@@ -129,8 +166,8 @@ async function updatePlayerStats(client: any, player: any, update: PlayerUpdate)
   if (handInfo.pfrAction) pos.pfr++
   if (handInfo.result === 'win') pos.won++
 
-  // Update betting patterns
-  const actionKey = `${handInfo.position}_${handInfo.action}`
+  // Update betting patterns with new metrics
+  const actionKey = `${handInfo.position}_${handInfo.action}_${handInfo.betSizeType || 'unknown'}`
   newStats.betting_patterns[actionKey] = (newStats.betting_patterns[actionKey] || 0) + 1
 
   // Update the player record

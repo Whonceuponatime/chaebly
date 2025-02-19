@@ -5,20 +5,20 @@ DROP TABLE IF EXISTS mendez_games;
 CREATE TABLE mendez_games (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
-    hand_id UUID NOT NULL,
+    hand_id TEXT NOT NULL,
     street TEXT NOT NULL CHECK (street IN ('preflop', 'flop', 'turn', 'river')),
-    players TEXT[] NOT NULL,
     hero_position TEXT NOT NULL,
     hero_cards TEXT NOT NULL,
     board_cards TEXT,
-    pot_size_bb INTEGER NOT NULL,
-    to_call_bb INTEGER NOT NULL,
-    current_bet_bb INTEGER NOT NULL,
+    pot_size_bb DECIMAL(10,2) NOT NULL,
+    to_call_bb DECIMAL(10,2) NOT NULL,
+    current_bet_bb DECIMAL(10,2) NOT NULL,
     active_players TEXT[] NOT NULL,
     action_on TEXT NOT NULL,
     last_action TEXT,
-    last_bet_size_bb INTEGER,
-    mendez_recommendation TEXT NOT NULL
+    last_bet_size_bb DECIMAL(10,2),
+    gpt_decision TEXT NOT NULL,
+    decision_reasoning TEXT NOT NULL
 );
 
 -- Add indexes
