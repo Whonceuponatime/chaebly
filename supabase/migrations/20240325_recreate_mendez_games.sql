@@ -17,6 +17,7 @@ CREATE TABLE mendez_games (
     action_on TEXT NOT NULL,
     last_action TEXT,
     last_bet_size_bb DECIMAL(10,2),
+    effective_stack DECIMAL(10,2) NOT NULL DEFAULT 0,
     gpt_decision TEXT NOT NULL,
     decision_reasoning TEXT NOT NULL
 );

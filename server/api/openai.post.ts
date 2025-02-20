@@ -15,6 +15,13 @@ const SUPPORTED_MODELS = [
   'gpt-3.5-turbo-16k'
 ]
 
+// Configuration for API calls
+const API_CONFIG = {
+  timeoutMs: 30000, // 30 seconds
+  maxRetries: 2,
+  retryDelayMs: 1000 // 1 second
+}
+
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
   const body = await readBody(event)
@@ -27,7 +34,9 @@ export default defineEventHandler(async (event) => {
   }
 
   const openai = new OpenAI({
-    apiKey: config.openaiApiKey
+    apiKey: config.openaiApiKey,
+    timeout: API_CONFIG.timeoutMs,
+    maxRetries: API_CONFIG.maxRetries
   })
 
   // Validate the requested model
@@ -39,35 +48,51 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  try {
-    const response = await openai.chat.completions.create({
-      model: requestedModel,
-      messages: body.messages,
-      temperature: body.temperature || 0.7,
-      max_tokens: body.max_tokens || 150,
-      presence_penalty: body.presence_penalty || 0,
-      frequency_penalty: body.frequency_penalty || 0
-    })
+  let attempt = 0
+  while (attempt < API_CONFIG.maxRetries + 1) {
+    try {
+      const response = await openai.chat.completions.create({
+        model: requestedModel,
+        messages: body.messages,
+        temperature: body.temperature || 0.7,
+        max_tokens: body.max_tokens || 150,
+        presence_penalty: body.presence_penalty || 0,
+        frequency_penalty: body.frequency_penalty || 0
+      })
 
-    if (!response.choices?.[0]?.message?.content) {
-      throw new Error('Empty response from OpenAI')
+      if (!response.choices?.[0]?.message?.content) {
+        throw new Error('Empty response from OpenAI')
+      }
+
+      return {
+        content: response.choices[0].message.content
+      }
+    } catch (error: any) {
+      attempt++
+      
+      // Log the error details
+      console.error('OpenAI API Error:', {
+        attempt,
+        message: error.message,
+        code: error.code,
+        type: error.type,
+        param: error.param,
+        status: error.status
+      })
+
+      // If it's a timeout error and we haven't exceeded retries, wait and retry
+      if (error.code === 'ETIMEDOUT' && attempt < API_CONFIG.maxRetries + 1) {
+        await new Promise(resolve => setTimeout(resolve, API_CONFIG.retryDelayMs))
+        continue
+      }
+
+      // If it's the last attempt or a non-timeout error, throw the error
+      if (attempt >= API_CONFIG.maxRetries + 1 || error.code !== 'ETIMEDOUT') {
+        throw createError({
+          statusCode: error.status || 500,
+          message: `OpenAI API error (attempt ${attempt}/${API_CONFIG.maxRetries + 1}): ${error.message}`
+        })
+      }
     }
-
-    return {
-      content: response.choices[0].message.content
-    }
-  } catch (error: any) {
-    console.error('OpenAI API Error:', {
-      message: error.message,
-      code: error.code,
-      type: error.type,
-      param: error.param,
-      status: error.status
-    })
-
-    throw createError({
-      statusCode: error.status || 500,
-      message: `OpenAI API error: ${error.message}`
-    })
   }
 }) 

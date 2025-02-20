@@ -33,7 +33,7 @@ Respond with exactly two sentences: First sentence must be "Action: [fold/call/r
       method: 'POST',
       body: {
         messages: [{ role: 'user', content: prompt }],
-        model: 'gpt-3.5-turbo-0125',
+        model: 'gpt-4o',
         temperature: 0.7,
         max_tokens: 150
       }

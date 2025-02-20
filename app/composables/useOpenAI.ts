@@ -6,7 +6,7 @@ export const useOpenAI = () => {
 
   const generateResponse = async (
     prompt: string, 
-    model: 'o1' | 'gpt-4o' = 'o1'
+    model: 'o1' | 'gpt-4o' = 'gpt-4o'
   ) => {
     loading.value = true
     error.value = null
