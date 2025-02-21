@@ -1,6 +1,6 @@
 import type { MendezAction, PlayerHistory } from './types'
 import { determinePlayingStyle, findExploitableTendencies } from './playerStats'
-import { getPreflopAction, getPostflopAdjustment } from './strategyAdjustments'
+import { getPreflopAction, getPostflopAdjustment, mapToStandardPosition } from './strategyAdjustments'
 import { apiManager } from './apiManager'
 
 function debugLog(section: string, data: any) {
@@ -75,22 +75,69 @@ function validatePayload(actionData: MendezAction): void {
 
 function validateGPTResponse(content: string, actionData: MendezAction): boolean {
   // Check if response mentions the correct hand
-  const hasCorrectHand = content.includes(actionData.hero_cards)
+  const hasCorrectHand = content.toLowerCase().includes(actionData.hero_cards.toLowerCase())
   
   // Check if response mentions the correct board if it exists
-  const hasCorrectBoard = !actionData.board_cards || content.includes(actionData.board_cards)
+  const hasCorrectBoard = !actionData.board_cards || content.toLowerCase().includes(actionData.board_cards.toLowerCase())
   
   // Check if response mentions the correct position
-  const hasCorrectPosition = content.includes(actionData.hero_position)
+  const hasCorrectPosition = content.toLowerCase().includes(actionData.hero_position.toLowerCase())
+
+  // Check if response contains a valid action
+  const hasValidAction = /(fold|call|raise)/i.test(content)
 
   debugLog('GPT RESPONSE VALIDATION', {
     hasCorrectHand,
     hasCorrectBoard,
     hasCorrectPosition,
-    isValid: hasCorrectHand || hasCorrectBoard || hasCorrectPosition
+    hasValidAction,
+    isValid: (hasCorrectHand || hasCorrectBoard || hasCorrectPosition) && hasValidAction
   })
 
-  return hasCorrectHand || hasCorrectBoard || hasCorrectPosition
+  return (hasCorrectHand || hasCorrectBoard || hasCorrectPosition) && hasValidAction
+}
+
+// Add markdown export function
+function generateMarkdown(actionData: MendezAction, metrics: any, actionHistoryText: string, playerStats: any[], adjustment: any): string {
+  const md = `# Poker Hand Analysis
+
+## Current Situation
+- **Position:** ${actionData.hero_position} (${metrics.isIP ? 'In Position' : 'Out of Position'})
+- **Hero Cards:** ${actionData.hero_cards}
+- **Board:** ${actionData.board_cards || 'Preflop'}
+- **Street:** ${actionData.street}
+- **Pot Size:** ${metrics.pot}BB
+- **To Call:** ${metrics.toCall}BB
+- **Effective Stack:** ${metrics.stack}BB${metrics.potOdds ? `\n- **Pot Odds:** ${metrics.potOdds}%` : ''}
+- **Active Players:** ${actionData.active_players.length} (${metrics.isMultiway ? 'Multiway Pot' : 'Heads Up'})
+
+## Action History
+\`\`\`
+${actionHistoryText}
+\`\`\`
+
+## Stack Sizes
+\`\`\`
+${Object.entries(actionData.playerStacks || {})
+  .map(([player, stack]) => `${player}(${actionData.positions?.[player] || '?'}): ${stack}BB`)
+  .join('\n')}
+\`\`\`
+
+## Player Statistics
+| Player | Style | VPIP | PFR | Aggression |
+|--------|-------|------|-----|------------|
+${playerStats.map(p => `| ${p.name} | ${p.style} | ${p.vpip}% | ${p.pfr}% | ${p.agg} |`).join('\n')}
+
+## GTO Analysis
+- **Suggested Action:** ${adjustment.action}
+- **Reasoning:** ${adjustment.reasoning}
+
+## Final Decision
+- **Action:** [Pending GPT Analysis]
+- **Confidence:** [Pending]
+- **Reasoning:** [Pending]
+`
+  return md
 }
 
 export async function getGPTAnalysis(actionData: MendezAction, playerHistories: PlayerHistory[]) {
@@ -98,10 +145,14 @@ export async function getGPTAnalysis(actionData: MendezAction, playerHistories: 
     // Validate payload first
     validatePayload(actionData)
 
+    // Map the position to a standard one
+    const standardPosition = mapToStandardPosition(actionData.hero_position)
+
     debugLog('HAND INFO', {
       handId: actionData.hand_id,
       street: actionData.street,
       position: actionData.hero_position,
+      standardPosition,
       hand: actionData.hero_cards,
       board: actionData.board_cards || '-',
       stack: actionData.effective_stack,
@@ -111,10 +162,13 @@ export async function getGPTAnalysis(actionData: MendezAction, playerHistories: 
 
     // Format action history concisely
     const actionHistoryText = actionData.action_history?.map(action => 
-      `${action.player}${actionData.positions?.[action.player] ? `(${actionData.positions[action.player]})` : ''}: ${action.action}${action.amount}BB`
-    ).join(' | ') || 'No history'
+      `${action.player}(${actionData.positions?.[action.player] || '?'}): ${action.action}${action.amount > 0 ? ` ${action.amount}BB` : ''}`
+    ).join(' → ') || 'No history'
 
-    debugLog('ACTION HISTORY', actionHistoryText)
+    // Calculate pot odds if facing a bet
+    const potOdds = actionData.to_call_bb > 0 
+      ? ((actionData.to_call_bb / (actionData.pot_size_bb + actionData.to_call_bb)) * 100).toFixed(1)
+      : null
 
     // Pre-calculate metrics concisely
     const effectiveStack = actionData.effective_stack || 0
@@ -122,9 +176,10 @@ export async function getGPTAnalysis(actionData: MendezAction, playerHistories: 
       stack: effectiveStack,
       pot: actionData.pot_size_bb,
       toCall: actionData.to_call_bb,
-      isIP: ['BTN', 'CO'].includes(actionData.hero_position) || 
-            (actionData.hero_position === 'MP' && !actionData.active_players.some(p => ['BTN', 'CO'].includes(actionData.positions?.[p] || ''))),
-      isMultiway: actionData.active_players.length > 2
+      isIP: ['BTN', 'CO'].includes(standardPosition) || 
+            (standardPosition === 'MP' && !actionData.active_players.some(p => ['BTN', 'CO'].includes(actionData.positions?.[p] || ''))),
+      isMultiway: actionData.active_players.length > 2,
+      potOdds
     }
 
     debugLog('METRICS', metrics)
@@ -144,29 +199,53 @@ export async function getGPTAnalysis(actionData: MendezAction, playerHistories: 
 
     // Get strategy adjustment
     const adjustment = actionData.street === 'preflop' ? 
-      { action: getPreflopAction(actionData.hero_cards, actionData.hero_position as any), reasoning: 'Preflop strategy' } :
+      { action: getPreflopAction(actionData.hero_cards, standardPosition), reasoning: 'Preflop strategy' } :
       getPostflopAdjustment(
         actionData.hero_cards,
         actionData.board_cards || '',
-        actionData.hero_position as any,
+        standardPosition,
         metrics.isMultiway,
         !actionData.last_action
       )
 
     debugLog('STRATEGY ADJUSTMENT', adjustment)
 
-    // Build concise prompt
-    const prompt = `Analyze this ${actionData.street} situation:
-${actionData.hero_position}${metrics.isIP ? '(IP)' : '(OOP)'} holding ${actionData.hero_cards}
-${actionData.board_cards ? `Board: ${actionData.board_cards}` : 'Preflop'}
-Pot: ${metrics.pot}BB Call: ${metrics.toCall}BB Stack: ${metrics.stack}BB
-History: ${actionHistoryText}
-Players: ${actionData.active_players.map(p => 
-  `${p}(${actionData.positions?.[p] || '?'}:${actionData.playerStacks?.[p] || '?'}BB)`
-).join(' ')}
-${playerStats.map(p => `${p.name}:${p.style} ${p.vpip}/${p.pfr}/${p.agg}`).join(' | ')}
-Suggest: ${adjustment.action} (${adjustment.reasoning})
-Action:[fold/call/raise] Reason:[brief]`
+    // Generate markdown for the analysis
+    const markdown = generateMarkdown(actionData, metrics, actionHistoryText, playerStats, adjustment)
+    debugLog('MARKDOWN', markdown)
+
+    // Build detailed prompt
+    const prompt = `Analyze this ${actionData.street} poker situation:
+
+Current Situation:
+- Position: ${actionData.hero_position} (${metrics.isIP ? 'In Position' : 'Out of Position'})
+- Hero Cards: ${actionData.hero_cards}
+- Board: ${actionData.board_cards || 'Preflop'}
+- Street: ${actionData.street}
+- Pot Size: ${metrics.pot}BB
+- To Call: ${metrics.toCall}BB
+- Effective Stack: ${metrics.stack}BB
+${potOdds ? `- Pot Odds: ${potOdds}%` : ''}
+- Active Players: ${actionData.active_players.length}
+${metrics.isMultiway ? '- Multiway Pot' : '- Heads Up'}
+
+Action History:
+${actionHistoryText}
+
+Stack Sizes:
+${Object.entries(actionData.playerStacks || {})
+  .map(([player, stack]) => `${player}(${actionData.positions?.[player] || '?'}): ${stack}BB`)
+  .join('\n')}
+
+Player Stats:
+${playerStats.map(p => `${p.name}: ${p.style} (VPIP: ${p.vpip}%, PFR: ${p.pfr}%, AGG: ${p.agg})`).join('\n')}
+
+GTO Adjustment:
+Suggested: ${adjustment.action} (${adjustment.reasoning})
+
+Provide a decision in this format:
+Action: [fold/call/raise]
+Reason: [brief explanation considering position, pot odds, stack sizes, and player tendencies]`
 
     debugLog('GPT PROMPT', prompt)
 
@@ -208,7 +287,8 @@ Action:[fold/call/raise] Reason:[brief]`
         reasoning: reasoning.slice(0, 100),
         adjustmentReason: adjustment.reasoning.slice(0, 50),
         gtoContext: '',
-        reliablePlayerStats: playerStats.length > 0
+        reliablePlayerStats: playerStats.length > 0,
+        markdown // Include markdown in the result
       }
 
       debugLog('FINAL DECISION', result)
@@ -227,7 +307,8 @@ Action:[fold/call/raise] Reason:[brief]`
         reasoning: adjustment.reasoning.slice(0, 50),
         adjustmentReason: 'Using strategy adjustment',
         gtoContext: '',
-        reliablePlayerStats: playerStats.length > 0
+        reliablePlayerStats: playerStats.length > 0,
+        markdown // Include markdown even in fallback
       }
 
       debugLog('FALLBACK DECISION', fallbackResult)
@@ -245,23 +326,46 @@ Action:[fold/call/raise] Reason:[brief]`
       reasoning: 'Failed',
       adjustmentReason: 'Failed',
       gtoContext: '',
-      reliablePlayerStats: false
+      reliablePlayerStats: false,
+      markdown: '# Analysis Failed\n\nUnable to analyze the poker situation.' // Include error markdown
     }
   }
 }
 
 function parseResponse(content: string): { action: string, reasoning: string } {
-  const actionMatch = content.match(/Action:\s*(fold|call|raise)/i) ||
-                     content.match(/(fold|call|raise)/i)
+  // First try to match the formal "Action: X" format
+  let actionMatch = content.match(/Action:\s*(fold|call|raise)/i)
+  
+  // If that fails, look for any mention of the actions
+  if (!actionMatch) {
+    actionMatch = content.match(/(fold|call|raise)/i)
+  }
   
   if (!actionMatch) {
     throw new Error('No action found')
   }
 
-  const reasoningMatch = content.match(/Reason(?:ing)?:\s*(.+)/i)
+  // Extract reasoning - try different patterns
+  let reasoning = ''
+  const reasoningMatch = content.match(/Reason(?:ing)?:\s*(.+)/i) ||
+                        content.match(/because\s+(.+)/i) ||
+                        content.match(/due to\s+(.+)/i)
+  
+  if (reasoningMatch) {
+    reasoning = reasoningMatch[1].trim()
+  } else {
+    // If no explicit reasoning found, use everything after the action
+    const actionIndex = content.indexOf(actionMatch[0])
+    if (actionIndex >= 0) {
+      reasoning = content.slice(actionIndex + actionMatch[0].length).trim()
+    } else {
+      reasoning = content.trim()
+    }
+  }
+
   return {
     action: actionMatch[1].toLowerCase(),
-    reasoning: (reasoningMatch?.[1] || content).trim()
+    reasoning: reasoning || content
   }
 }
 

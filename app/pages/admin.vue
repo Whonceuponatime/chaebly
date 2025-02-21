@@ -9,249 +9,366 @@
     <div v-else class="admin-content">
       <h1>Mendez Control Panel</h1>
       
-      <!-- Error Message -->
-      <div v-if="error" class="mb-4 p-4 bg-red-100 text-red-700 rounded">
-        <p class="font-bold">Error:</p>
-        <p>{{ error }}</p>
-      </div>
-
-      <!-- Loading Message -->
-      <div v-if="loading" class="mb-4 p-4 bg-blue-100 text-blue-700 rounded">
-        <p>Loading data...</p>
-      </div>
-      
-      <!-- Basic Stats Overview -->
-      <section class="admin-section mb-8">
-        <h2>Overview</h2>
-        <div class="stats-grid">
-          <div class="stat-item">
-            <h3>Total Games</h3>
-            <p class="stat-value">{{ mendezGames.length }}</p>
-          </div>
-          <div class="stat-item">
-            <h3>Total Profit/Loss</h3>
-            <p class="stat-value" :class="totalProfit >= 0 ? 'text-green-600' : 'text-red-600'">
-              {{ totalProfit }}BB
-            </p>
+      <!-- Real-time status indicator -->
+      <div class="flex items-center gap-4 mb-4">
+        <div class="flex items-center gap-2">
+          <div class="h-3 w-3 rounded-full" :class="[
+            loading ? 'bg-yellow-400 animate-pulse' : 
+            error ? 'bg-red-500' : 
+            'bg-green-500'
+          ]"></div>
+          <span class="text-sm text-gray-600">
+            {{ loading ? 'Updating...' : error ? 'Error' : 'Live' }}
+          </span>
             </div>
-          <div class="stat-item">
-            <h3>Win Rate</h3>
-            <p class="stat-value">{{ winRate }}%</p>
-          </div>
-          <div class="stat-item">
-            <h3>Total Players Tracked</h3>
-            <p class="stat-value">{{ playerHistories.length }}</p>
+        
+        <!-- Auto-refresh toggle -->
+        <div class="flex items-center gap-2">
+          <label class="text-sm text-gray-600">Auto-refresh:</label>
+          <button 
+            @click="isAutoRefreshEnabled = !isAutoRefreshEnabled"
+            class="px-3 py-1 rounded text-sm"
+            :class="isAutoRefreshEnabled ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'"
+          >
+            {{ isAutoRefreshEnabled ? 'On' : 'Off' }}
+              </button>
             </div>
-          </div>
-        </section>
 
-      <!-- Auto-refresh controls -->
-      <div class="flex items-center gap-2 mb-4">
+        <!-- Manual refresh button -->
             <button 
           @click="refreshData" 
           class="refresh-btn"
               :disabled="loading"
             >
-          Refresh Data
+          Refresh Now
             </button>
-        <div class="flex items-center gap-2">
-          <label class="text-sm text-gray-600">Auto-refresh:</label>
-          <input
-            type="checkbox"
-            v-model="isAutoRefreshEnabled"
-            @change="isAutoRefreshEnabled ? startAutoRefresh() : stopAutoRefresh()"
-            class="form-checkbox h-4 w-4 text-blue-600"
+      </div>
+
+      <!-- Error message -->
+      <div v-if="error" class="mb-4 p-4 bg-red-100 text-red-700 rounded">
+        <p class="font-bold">Error:</p>
+        <p>{{ error }}</p>
+            <button 
+          @click="refreshData"
+          class="mt-2 text-sm underline hover:no-underline"
+            >
+          Try again
+            </button>
+          </div>
+
+      <!-- Add new section for data export options -->
+      <div class="export-section mb-6">
+        <h3 class="text-lg font-semibold mb-4">Data Export Options</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <button 
+            @click="exportHandHistory" 
+            class="export-btn bg-blue-600"
+                >
+            Export Hand History
+                </button>
+                <button 
+            @click="exportPlayerStats" 
+            class="export-btn bg-green-600"
           >
+            Export Player Stats
+          </button>
+          <button 
+            @click="exportGPTAnalysis" 
+            class="export-btn bg-purple-600"
+          >
+            Export GPT Analysis
+          </button>
+          <button 
+            @click="exportFullDatabase" 
+            class="export-btn bg-gray-600"
+          >
+            Export Full Database
+                </button>
+              </div>
+            </div>
+
+      <!-- Add filters section -->
+      <div class="filters-section mb-6">
+        <h3 class="text-lg font-semibold mb-4">Filters</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="filter-group">
+            <label class="block text-sm font-medium text-gray-700">Date Range</label>
+            <select v-model="dateFilter" class="filter-select">
+              <option value="all">All Time</option>
+              <option value="today">Today</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label class="block text-sm font-medium text-gray-700">Position</label>
+            <select v-model="positionFilter" class="filter-select">
+              <option value="all">All Positions</option>
+              <option v-for="pos in positions" :key="pos" :value="pos">{{ pos }}</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label class="block text-sm font-medium text-gray-700">Street</label>
+            <select v-model="streetFilter" class="filter-select">
+              <option value="all">All Streets</option>
+              <option value="preflop">Preflop</option>
+              <option value="flop">Flop</option>
+              <option value="turn">Turn</option>
+              <option value="river">River</option>
+            </select>
+          </div>
         </div>
       </div>
 
-      <!-- Recent Games Table -->
-      <section class="admin-section">
-        <div class="header-actions">
-          <div class="flex items-center gap-2">
-            <h2>Hand History</h2>
-            <button 
-              @click="isDebugMode = !isDebugMode"
-              class="debug-btn"
-              :class="{ 'active': isDebugMode }"
-            >
-              {{ isDebugMode ? 'Hide Debug' : 'Show Debug' }}
-            </button>
+      <!-- Add analysis tabs -->
+      <div class="analysis-tabs mb-6">
+        <div class="tab-buttons">
+              <button 
+            v-for="tab in ['Overview', 'Hand History', 'Player Stats', 'GPT Analysis', 'Strategy Analysis']" 
+            :key="tab"
+            @click="currentTab = tab"
+            :class="['tab-btn', { active: currentTab === tab }]"
+          >
+            {{ tab }}
+              </button>
           </div>
+
+        <!-- Overview Tab -->
+        <div v-if="currentTab === 'Overview'" class="tab-content">
+          <div class="stats-grid">
+            <div class="stat-item">
+              <h3>Total Games</h3>
+              <p class="stat-value">{{ mendezGames.length }}</p>
               </div>
-
-        <!-- Debug Information -->
-        <div v-if="isDebugMode" class="debug-section mb-4">
-          <div v-for="game in mendezGames.slice(0, 5)" :key="game.id" class="debug-card">
-            <div class="debug-header">
-              <h4>Hand ID: {{ game.hand_id }}</h4>
-              <span class="text-xs text-gray-500">{{ formatDate(game.created_at) }}</span>
+            <div class="stat-item">
+              <h3>Total Profit/Loss</h3>
+              <p class="stat-value" :class="totalProfit >= 0 ? 'text-green-600' : 'text-red-600'">
+                {{ totalProfit }}BB
+              </p>
             </div>
-            
-            <!-- Request Payload -->
-            <div class="debug-content">
-              <h5>Request Payload</h5>
-              <pre class="debug-pre">{{ formatDebugData({
-                handId: game.hand_id,
-                street: game.street,
-                heroPosition: game.hero_position,
-                heroCards: game.hero_cards,
-                boardCards: game.board_cards,
-                potSize: game.pot_size_bb,
-                toCall: game.to_call_bb,
-                currentBet: game.current_bet_bb,
-                actionHistory: game.action_history,
-                effectiveStack: game.effective_stack,
-                positions: game.positions
-              }) }}</pre>
+            <div class="stat-item">
+              <h3>Win Rate</h3>
+              <p class="stat-value">{{ winRate }}%</p>
             </div>
-
-            <!-- Board Analysis -->
-            <div v-if="game.street !== 'preflop'" class="debug-content">
-              <h5>Board Analysis</h5>
-              <div class="grid grid-cols-2 gap-2 text-sm">
-                <div>
-                  <span class="font-medium">Board:</span>
-                  <span class="font-mono">{{ game.board_cards }}</span>
-                </div>
-                <div>
-                  <span class="font-medium">Texture:</span>
-                  <span>{{ getBoardTexture(game.board_cards || '') }}</span>
-                </div>
-                <div>
-                  <span class="font-medium">Draws:</span>
-                  <span>{{ getPossibleDraws(game.board_cards || '') }}</span>
+            <div class="stat-item">
+              <h3>Total Players Tracked</h3>
+              <p class="stat-value">{{ playerHistories.length }}</p>
+            </div>
           </div>
-                <div>
-                  <span class="font-medium">Hero Equity:</span>
-                  <span>{{ getHeroEquity(game.hero_cards, game.board_cards || '') }}%</span>
-              </div>
-              </div>
-            </div>
-
-            <!-- Position & Stack Analysis -->
-            <div class="debug-content">
-              <h5>Position & Stack Analysis</h5>
-              <div class="grid grid-cols-2 gap-2 text-sm">
-                <div>
-                  <span class="font-medium">Hero Position:</span>
-                  <span>{{ game.hero_position }}</span>
-                </div>
-                <div>
-                  <span class="font-medium">Effective Stack:</span>
-                  <span>{{ game.effective_stack }}BB</span>
-                </div>
-                <div>
-                  <span class="font-medium">SPR:</span>
-                  <span>{{ calculateSPR(game) }}</span>
-          </div>
-                <div>
-                  <span class="font-medium">Position Type:</span>
-                  <span>{{ getPositionType(game) }}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Action History -->
-            <div class="debug-content">
-              <h5>Action History</h5>
-              <div class="space-y-1 text-sm">
-                <div v-for="(action, index) in game.action_history" :key="index" 
-                     class="flex justify-between items-center py-1 border-b border-gray-200 last:border-0">
-                  <span>
-                    <span class="font-medium">{{ action.player }}</span>
-                    <span class="text-gray-500">({{ game.positions?.[action.player] || '?' }})</span>
-                  </span>
-                  <span>
-                    <span class="capitalize">{{ action.action }}</span>
-                    <span v-if="action.amount > 0" class="text-blue-600">{{ action.amount }}BB</span>
-                  </span>
-          </div>
-              </div>
-            </div>
-
-            <!-- GPT Response -->
-            <div class="debug-content">
-              <h5>GPT Response</h5>
-              <pre class="debug-pre">{{ formatDebugData({
-                decision: game.gpt_decision,
-                reasoning: game.decision_reasoning,
-                confidence: getConfidenceLevel(game)
-              }) }}</pre>
-            </div>
-
-            <!-- Performance Metrics -->
-            <div class="debug-content">
-              <h5>Performance Metrics</h5>
-              <div class="grid grid-cols-2 gap-2 text-sm">
-                <div>
-                  <span class="font-medium">API Latency:</span>
-                  <span>{{ getApiLatency(game) }}ms</span>
-                </div>
-                <div>
-                  <span class="font-medium">Token Count:</span>
-                  <span>{{ estimateTokenCount(game) }}</span>
-                </div>
-                <div>
-                  <span class="font-medium">Model:</span>
-                  <span>gpt-4o</span>
-                </div>
-                <div>
-                  <span class="font-medium">Status:</span>
-                  <span :class="getStatusClass(game)">{{ getRequestStatus(game) }}</span>
-                </div>
-              </div>
-            </div>
+          <div class="charts-grid">
+            <!-- Charts will be added here -->
           </div>
         </div>
 
-        <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-              <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Street</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Position</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hand</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Board</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action History</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Effective Stack</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pot Size</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">To Call</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">GPT</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reasoning</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Final</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Result</th>
-              </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-              <tr v-for="game in mendezGames" :key="game.id">
-                <td class="px-6 py-4 whitespace-nowrap text-sm capitalize">{{ game.street }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm">{{ game.hero_position }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-mono">{{ game.hero_cards }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-mono">{{ game.board_cards || '-' }}</td>
-                <td class="px-6 py-4 text-sm">
-                  <div v-if="game.action_history" class="space-y-1">
-                    <div v-for="(action, index) in game.action_history" :key="index" class="text-xs">
-                      {{ formatAction(action) }}
-                    </div>
+        <!-- Hand History Tab -->
+        <div v-if="currentTab === 'Hand History'" class="tab-content">
+          <div class="header-actions">
+            <div class="flex items-center gap-2">
+              <h2>Hand History</h2>
+              <button 
+                @click="isDebugMode = !isDebugMode"
+                class="debug-btn"
+                :class="{ 'active': isDebugMode }"
+              >
+                {{ isDebugMode ? 'Hide Debug' : 'Show Debug' }}
+                </button>
+              </div>
+            </div>
+
+          <!-- Debug Information -->
+          <div v-if="isDebugMode" class="stats-overview mb-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <!-- Street Distribution -->
+              <div class="stat-panel">
+                <h3 class="stat-title">Street Distribution</h3>
+                <div class="stat-content">
+                  <div v-for="item in streetDistribution" :key="item.street" class="stat-row">
+                    <span class="capitalize">{{ item.street }}:</span>
+                    <span class="font-medium">{{ item.percentage }}%</span>
                   </div>
-                  <div v-else class="text-xs text-gray-500">No history</div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm">{{ game.effective_stack }}BB</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm">{{ game.pot_size_bb }}BB</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm">{{ game.to_call_bb }}BB</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm">{{ game.gpt_decision }}</td>
-                <td class="px-6 py-4 text-sm max-w-md">{{ game.decision_reasoning || '-' }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm">{{ game.final_action || '-' }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm" 
-                    :class="game.final_action === 'fold' ? 'text-red-600' : game.pot_size_bb > 0 ? 'text-green-600' : 'text-red-600'">
-                  {{ game.final_action === 'fold' ? 'Fold' : game.pot_size_bb > 0 ? 'Win' : 'Loss' }}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
+                </div>
+              </div>
+
+              <!-- Position Stats -->
+              <div class="stat-panel">
+                <h3 class="stat-title">Position Stats</h3>
+                <div class="stat-content">
+                  <div v-for="item in positionDistribution" :key="item.position" class="stat-row">
+                    <span>{{ item.position }}:</span>
+                    <span class="font-medium">{{ item.percentage }}%</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Decision Stats -->
+              <div class="stat-panel">
+                <h3 class="stat-title">Decision Stats</h3>
+                <div class="stat-content">
+                  <div v-for="item in decisionDistribution" :key="item.decision" class="stat-row">
+                    <span class="capitalize">{{ item.decision }}:</span>
+                    <span class="font-medium" :class="getDecisionClass(item.decision)">{{ item.percentage }}%</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Board Texture Stats -->
+              <div class="stat-panel">
+                <h3 class="stat-title">Board Textures</h3>
+                <div class="stat-content">
+                  <div v-for="item in boardTextureDistribution" :key="item.texture" class="stat-row">
+                    <span>{{ item.texture }}:</span>
+                    <span class="font-medium">{{ item.percentage }}%</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Stack Size Distribution -->
+              <div class="stat-panel">
+                <h3 class="stat-title">Stack Sizes</h3>
+                <div class="stat-content">
+                  <div class="stat-row">
+                    <span>Average Stack:</span>
+                    <span class="font-medium">{{ stackStats.avgStack }}BB</span>
+                  </div>
+                  <div class="stat-row">
+                    <span>Average SPR:</span>
+                    <span class="font-medium">{{ stackStats.avgSPR }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Results Stats -->
+              <div class="stat-panel">
+                <h3 class="stat-title">Results</h3>
+                <div class="stat-content">
+                  <div class="stat-row">
+                    <span>Win Rate:</span>
+                    <span class="font-medium text-green-600">{{ winRate }}%</span>
+                  </div>
+                  <div class="stat-row">
+                    <span>Average Profit:</span>
+                    <span class="font-medium" :class="Number(avgProfit) >= 0 ? 'text-green-600' : 'text-red-600'">{{ avgProfit }}BB</span>
+                  </div>
+                  <div class="stat-row">
+                    <span>GPT Accuracy:</span>
+                    <span class="font-medium">{{ gptStats.successRate }}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+                
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Street</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Position</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hand</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Board</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action History</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Effective Stack</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pot Size</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">To Call</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">GPT</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reasoning</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Final</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Result</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <tr v-for="game in filteredHandHistory" :key="game.id">
+                  <td class="px-6 py-4 whitespace-nowrap text-sm capitalize">{{ game.street }}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm">{{ game.hero_position }}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-mono">{{ game.hero_cards }}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-mono">{{ game.board_cards || '-' }}</td>
+                  <td class="px-6 py-4 text-sm">
+                    <div v-if="game.action_history" class="space-y-1">
+                      <div v-for="(action, index) in game.action_history" :key="index" class="text-xs">
+                        {{ formatAction(action) }}
+                      </div>
+                    </div>
+                    <div v-else class="text-xs text-gray-500">No history</div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm">{{ game.effective_stack }}BB</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm">{{ game.pot_size_bb }}BB</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm">{{ game.to_call_bb }}BB</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm">{{ game.gpt_decision }}</td>
+                  <td class="px-6 py-4 text-sm max-w-md">{{ game.decision_reasoning || '-' }}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm">{{ game.final_action || '-' }}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" 
+                      :class="game.final_action === 'fold' ? 'text-red-600' : game.pot_size_bb > 0 ? 'text-green-600' : 'text-red-600'">
+                    {{ game.final_action === 'fold' ? 'Fold' : game.pot_size_bb > 0 ? 'Win' : 'Loss' }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+                </div>
+
+        <!-- Player Stats Tab -->
+        <div v-if="currentTab === 'Player Stats'" class="tab-content">
+          <div class="position-stats">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div v-for="position in positions" :key="position" class="position-card">
+                <h4>{{ position }}</h4>
+                <div class="stats">
+                  <div class="stat-row">
+                    <span>Total Hands:</span>
+                    <span>{{ getPositionStats(position).total }}</span>
+                  </div>
+                  <div class="stat-row">
+                    <span>Win Rate:</span>
+                    <span>{{ getPositionStats(position).winRate }}%</span>
+                  </div>
+                  <div class="stat-row">
+                    <span>VPIP:</span>
+                    <span>{{ getPositionStats(position).vpip }}%</span>
+                  </div>
+                  <div class="stat-row">
+                    <span>PFR:</span>
+                    <span>{{ getPositionStats(position).pfr }}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+                </div>
+
+        <!-- GPT Analysis Tab -->
+        <div v-if="currentTab === 'GPT Analysis'" class="tab-content">
+          <div class="gpt-performance">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div class="stat-card">
+                <h4>Success Rate</h4>
+                <p class="text-2xl font-bold">{{ gptStats?.successRate || '0' }}%</p>
+                <p class="text-xs text-gray-500">Successful decisions / Total decisions</p>
+                  </div>
+              <div class="stat-card">
+                <h4>Average Confidence</h4>
+                <p class="text-2xl font-bold">{{ gptStats?.avgConfidence || '0' }}%</p>
+                <p class="text-xs text-gray-500">Based on high/medium/low confidence ratings</p>
+                  </div>
+              <div class="stat-card">
+                <h4>Decision Distribution</h4>
+                <p class="text-2xl font-bold">
+                  {{ gptStats?.decisionDistribution?.fold || '0' }}% / 
+                  {{ gptStats?.decisionDistribution?.call || '0' }}% / 
+                  {{ gptStats?.decisionDistribution?.raise || '0' }}%
+                </p>
+                <p class="text-xs text-gray-500">Fold / Call / Raise ratio</p>
+              </div>
+              <div class="stat-card">
+                <h4>Error Rate</h4>
+                <p class="text-2xl font-bold" :class="parseFloat(gptStats?.errorRate || '0') > 10 ? 'text-red-600' : 'text-green-600'">
+                  {{ gptStats?.errorRate || '0' }}%
+                </p>
+                <p class="text-xs text-gray-500">Failed decisions / Total decisions</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
       <!-- Player History -->
       <section class="admin-section mt-8">
@@ -298,6 +415,140 @@
           </div>
         </Transition>
         </section>
+
+      <!-- Add PokerStats component after player history -->
+      <section class="admin-section mt-8">
+        <div class="header-actions">
+          <div class="flex items-center gap-2">
+            <h2>Poker Statistics</h2>
+            <button 
+              @click="isStatsExpanded = !isStatsExpanded"
+              class="expand-btn"
+              :aria-label="isStatsExpanded ? 'Collapse statistics' : 'Expand statistics'"
+            >
+              {{ isStatsExpanded ? '▼' : '▶' }}
+            </button>
+          </div>
+          </div>
+        <Transition name="expand">
+          <div v-show="isStatsExpanded" class="mt-4">
+            <PokerStats 
+              v-if="mendezGames.length > 0" 
+              :games="mendezGames" 
+            />
+            <div v-else class="text-gray-500 text-center py-4">
+              No games data available
+      </div>
+          </div>
+        </Transition>
+      </section>
+
+      <!-- Analysis Table Section -->
+      <section class="admin-section mt-8">
+        <div class="header-actions">
+          <div class="flex items-center gap-2">
+            <h2>Hand Analysis</h2>
+            <button 
+              @click="isAnalysisExpanded = !isAnalysisExpanded"
+              class="expand-btn"
+              :aria-label="isAnalysisExpanded ? 'Collapse analysis' : 'Expand analysis'"
+            >
+              {{ isAnalysisExpanded ? '▼' : '▶' }}
+            </button>
+          </div>
+          <ExportAnalysisButton :analyses="currentAnalyses" />
+        </div>
+        <Transition name="expand">
+          <div v-show="isAnalysisExpanded" class="overflow-x-auto mt-4">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <!-- Basic Info -->
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase bg-gray-100" colspan="4">Basic Info</th>
+                  <!-- Position & Stack -->
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase bg-blue-50" colspan="4">Position & Stack</th>
+                  <!-- Board Analysis -->
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase bg-green-50" colspan="4">Board Analysis</th>
+                  <!-- Decision & Result -->
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase bg-purple-50" colspan="4">Decision & Result</th>
+                </tr>
+                <tr>
+                  <!-- Basic Info -->
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Time</th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Street</th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Hero Cards</th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Board</th>
+                  
+                  <!-- Position & Stack -->
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Position</th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Stack (BB)</th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Pot (BB)</th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">SPR</th>
+                  
+                  <!-- Board Analysis -->
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Texture</th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Draws</th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Equity</th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Action History</th>
+                  
+                  <!-- Decision & Result -->
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">GPT Decision</th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Reasoning</th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Final Action</th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Result</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <tr v-for="game in filteredHandHistory" :key="game.id" 
+                    class="hover:bg-gray-50 transition-colors"
+                    :class="{'bg-blue-50': game === mendezGames[0]}">
+                  <!-- Basic Info -->
+                  <td class="px-3 py-2 text-sm whitespace-nowrap">{{ formatDate(game.created_at) }}</td>
+                  <td class="px-3 py-2 text-sm capitalize whitespace-nowrap">{{ game.street }}</td>
+                  <td class="px-3 py-2 text-sm font-mono whitespace-nowrap">{{ game.hero_cards }}</td>
+                  <td class="px-3 py-2 text-sm font-mono whitespace-nowrap">{{ game.board_cards || '-' }}</td>
+                  
+                  <!-- Position & Stack -->
+                  <td class="px-3 py-2 text-sm whitespace-nowrap">
+                    {{ game.hero_position }}
+                    <span class="text-xs text-gray-500 block">({{ getPositionType(game) }})</span>
+                  </td>
+                  <td class="px-3 py-2 text-sm whitespace-nowrap">{{ game.effective_stack }}</td>
+                  <td class="px-3 py-2 text-sm whitespace-nowrap">{{ game.pot_size_bb }}</td>
+                  <td class="px-3 py-2 text-sm whitespace-nowrap">{{ calculateSPR(game) }}</td>
+                  
+                  <!-- Board Analysis -->
+                  <td class="px-3 py-2 text-sm whitespace-nowrap">{{ getBoardTexture(game.board_cards || '') }}</td>
+                  <td class="px-3 py-2 text-sm whitespace-nowrap">{{ getPossibleDraws(game.board_cards || '') }}</td>
+                  <td class="px-3 py-2 text-sm whitespace-nowrap">{{ getHeroEquity(game.hero_cards, game.board_cards || '') }}%</td>
+                  <td class="px-3 py-2 text-sm max-w-xs overflow-hidden overflow-ellipsis">
+                    <div class="space-y-1">
+                      <div v-for="(action, index) in game.action_history" :key="index" class="text-xs">
+                        {{ formatAction(action) }}
+                      </div>
+                    </div>
+                  </td>
+                  
+                  <!-- Decision & Result -->
+                  <td class="px-3 py-2 text-sm whitespace-nowrap" :class="getDecisionClass(game.gpt_decision)">
+                    {{ game.gpt_decision }}
+                    <span class="text-xs text-gray-500 block">({{ getConfidenceLevel(game) }})</span>
+                  </td>
+                  <td class="px-3 py-2 text-sm max-w-xs overflow-hidden overflow-ellipsis">
+                    {{ game.decision_reasoning || '-' }}
+                  </td>
+                  <td class="px-3 py-2 text-sm whitespace-nowrap" :class="getDecisionClass(game.final_action)">
+                    {{ game.final_action || '-' }}
+                  </td>
+                  <td class="px-3 py-2 text-sm whitespace-nowrap" :class="getResultClass(game)">
+                    {{ getResultText(game) }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </Transition>
+      </section>
     </div>
   </div>
 </template>
@@ -306,29 +557,17 @@
 import { useSupabaseClient } from '#imports'
 import { useAuth } from '../composables/useAuth'
 import type { Database } from '../../types/supabase.types'
+import PokerStats from '../components/charts/PokerStats.vue'
+import type { MendezGame } from '~/types/mendez.types'
+import ExportAnalysisButton from '~/components/admin/ExportAnalysisButton.vue'
 
-interface MendezGame {
-  id: string
-  created_at: string
-  hand_id: string
-  street: string
-  hero_position: string
-  hero_cards: string
-  board_cards?: string
-  pot_size_bb: number
-  to_call_bb: number
-  current_bet_bb: number
-  gpt_decision?: string | null
-  final_action?: string
-  last_action?: string
-  last_bet_size_bb?: number
-  decision_reasoning?: string
-  action_history?: any[]
-  effective_stack?: number
-  active_players?: string[]
-  action_on?: string
-  players?: string[]
-  positions?: Record<string, string>
+type ConfidenceLevel = 'high' | 'medium' | 'low'
+
+interface PositionStats {
+  total: number
+  winRate: string
+  vpip: string
+  pfr: string
 }
 
 interface PlayerHistory {
@@ -343,15 +582,37 @@ interface PlayerHistory {
   last_seen_at: string
 }
 
+interface GPTStats {
+  successRate: string
+  avgConfidence: string
+  decisionDistribution: {
+    fold: string
+    call: string
+    raise: string
+  }
+  errorRate: string
+}
+
+// Define available positions
+const positions = ['BTN', 'CO', 'MP', 'UTG', 'SB', 'BB'] as const
+type Position = typeof positions[number]
+
 const { user } = useAuth()
 const supabase = useSupabaseClient<Database>()
 const router = useRouter()
+
+// State variables
 const loading = ref(false)
 const error = ref<string | null>(null)
-const mendezGames = ref<MendezGame[]>([])
+const mendezGames = ref<SafeMendezGame[]>([])
 const playerHistories = ref<PlayerHistory[]>([])
 const isPlayerHistoryExpanded = ref(false)
+const isStatsExpanded = ref(true)
+const isAutoRefreshEnabled = ref(true)
+const refreshInterval = ref<NodeJS.Timeout | null>(null)
+const REFRESH_INTERVAL = 5000 // 5 seconds
 
+// Computed properties
 const totalProfit = computed(() => {
   return mendezGames.value.reduce((sum, game) => sum + game.pot_size_bb, 0)
 })
@@ -373,9 +634,72 @@ watchEffect(() => {
   }
 })
 
+interface SafeMendezGame extends Omit<MendezGame, 'created_at' | 'gpt_decision' | 'last_seen_at'> {
+  created_at: string
+  gpt_decision: string
+  last_seen_at: string
+}
+
+// Real-time subscriptions
+const setupRealtimeSubscriptions = async () => {
+  const gamesSubscription = supabase
+    .channel('games_channel')
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'mendez_games'
+      },
+      async () => {
+        await refreshMendezGames()
+      }
+    )
+    .subscribe()
+
+  const playerHistorySubscription = supabase
+    .channel('player_history_channel')
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'mendez_player_history'
+      },
+      async () => {
+        await refreshPlayerHistories()
+      }
+    )
+    .subscribe()
+
+  onUnmounted(() => {
+    gamesSubscription.unsubscribe()
+    playerHistorySubscription.unsubscribe()
+    stopAutoRefresh()
+  })
+}
+
+// Auto-refresh functionality
+const startAutoRefresh = () => {
+  if (refreshInterval.value) {
+    clearInterval(refreshInterval.value)
+  }
+  refreshInterval.value = setInterval(async () => {
+    if (!loading.value) {
+    await refreshData()
+    }
+  }, REFRESH_INTERVAL)
+}
+
+const stopAutoRefresh = () => {
+  if (refreshInterval.value) {
+    clearInterval(refreshInterval.value)
+    refreshInterval.value = null
+  }
+}
+
+// Data refresh functions
 const refreshMendezGames = async () => {
-  loading.value = true
-  error.value = null
   try {
     const { data, error: dbError } = await supabase
       .from('mendez_games')
@@ -383,18 +707,29 @@ const refreshMendezGames = async () => {
       .order('created_at', { ascending: false })
 
     if (dbError) throw dbError
-    mendezGames.value = data || []
+    
+    mendezGames.value = (data || []).map(game => ({
+      ...game,
+      created_at: game.created_at || new Date().toISOString(),
+      street: game.street as 'preflop' | 'flop' | 'turn' | 'river',
+      gpt_decision: game.gpt_decision || 'unknown',
+      player_stacks: game.player_stacks || {},
+      positions: game.positions || {},
+      action_history: game.action_history || [],
+      last_seen_at: game.last_seen_at || new Date().toISOString()
+    })) as SafeMendezGame[]
+
+    // Call handleAnalysis with the new data
+    if (mendezGames.value.length > 0) {
+      handleAnalysis({ success: true })
+    }
   } catch (err) {
     console.error('Error refreshing Mendez games:', err)
-    error.value = err instanceof Error ? err.message : 'An unknown error occurred'
-  } finally {
-    loading.value = false
+    throw err
   }
 }
 
 const refreshPlayerHistories = async () => {
-  loading.value = true
-  error.value = null
   try {
     const { data, error: dbError } = await supabase
       .from('mendez_player_history')
@@ -405,101 +740,60 @@ const refreshPlayerHistories = async () => {
     playerHistories.value = data || []
   } catch (err) {
     console.error('Error refreshing player histories:', err)
-    error.value = err instanceof Error ? err.message : 'An unknown error occurred'
+    throw err
+  }
+}
+
+const refreshData = async () => {
+  if (loading.value) return
+
+  loading.value = true
+  error.value = null
+  
+  try {
+    await Promise.all([
+      refreshMendezGames(),
+      refreshPlayerHistories()
+    ])
+  } catch (err) {
+    console.error('Error refreshing data:', err)
+    error.value = err instanceof Error ? err.message : 'Failed to refresh data'
   } finally {
     loading.value = false
   }
 }
 
-const refreshData = async () => {
-  await Promise.all([
-    refreshMendezGames(),
-    refreshPlayerHistories()
-  ])
-}
-
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleString()
-}
-
-const formatPercentage = (value: number) => {
-  return `${value.toFixed(1)}%`
-}
-
-const formatNumber = (value: number) => {
-  return value.toFixed(2)
-}
-
-const autoRefreshInterval = ref<NodeJS.Timeout | null>(null)
-const isAutoRefreshEnabled = ref(false)
-
-function startAutoRefresh(intervalMs = 5000) {
-  if (autoRefreshInterval.value) {
-    clearInterval(autoRefreshInterval.value)
-  }
-  autoRefreshInterval.value = setInterval(async () => {
-    if (!loading.value) {
-      await refreshData()
-    }
-  }, intervalMs)
-}
-
-function stopAutoRefresh() {
-  if (autoRefreshInterval.value) {
-    clearInterval(autoRefreshInterval.value)
-    autoRefreshInterval.value = null
-  }
-}
-
-watch(loading, (newValue) => {
+// Watch auto-refresh toggle
+watch(isAutoRefreshEnabled, (newValue) => {
   if (newValue) {
-    stopAutoRefresh()
-  } else if (isAutoRefreshEnabled.value) {
     startAutoRefresh()
+  } else {
+    stopAutoRefresh()
   }
 })
 
+// Initialize on mount
 onMounted(async () => {
   if (isAuthorized.value) {
     await refreshData()
-    
-    const gamesSubscription = supabase
-      .channel('games_channel')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'mendez_games'
-        },
-        async () => {
-          await refreshMendezGames()
-        }
-      )
-      .subscribe()
-
-    const playerHistorySubscription = supabase
-      .channel('player_history_channel')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'mendez_player_history'
-        },
-        async () => {
-          await refreshPlayerHistories()
-        }
-      )
-      .subscribe()
-
-    onUnmounted(() => {
-      gamesSubscription.unsubscribe()
-      playerHistorySubscription.unsubscribe()
-      stopAutoRefresh()
-    })
+    setupRealtimeSubscriptions()
+    if (isAutoRefreshEnabled.value) {
+      startAutoRefresh()
+    }
   }
 })
+
+function formatDate(dateString: string) {
+  return new Date(dateString).toLocaleString()
+}
+
+function formatPercentage(value: number) {
+  return `${value.toFixed(1)}%`
+}
+
+function formatNumber(value: number) {
+  return value.toFixed(2)
+}
 
 function formatAction(action: any): string {
   if (!action) return ''
@@ -516,20 +810,20 @@ function formatDebugData(data: any): string {
   return JSON.stringify(data, null, 2)
 }
 
-function getConfidenceLevel(game: MendezGame): string {
-  if (!game.gpt_decision) return 'low'
-  if (game.decision_reasoning?.includes('high confidence')) return 'high'
-  if (game.decision_reasoning?.includes('medium confidence')) return 'medium'
-  return 'medium'
+function getConfidenceLevel(hand: SafeMendezGame): ConfidenceLevel {
+  if (!hand.gpt_decision) return 'low'
+  if (hand.decision_reasoning?.includes('high confidence')) return 'high'
+  if (hand.decision_reasoning?.includes('medium confidence')) return 'medium'
+  return 'low'
 }
 
-function getApiLatency(game: MendezGame): number {
+function getApiLatency(game: SafeMendezGame): number {
   // Simulate API latency based on created_at timestamp
   // In a real implementation, you would track actual API latency
   return Math.floor(Math.random() * 500 + 500)
 }
 
-function estimateTokenCount(game: MendezGame): number {
+function estimateTokenCount(game: SafeMendezGame): number {
   // Estimate token count based on content length
   // In a real implementation, you would track actual token usage
   const content = JSON.stringify({
@@ -539,13 +833,13 @@ function estimateTokenCount(game: MendezGame): number {
   return Math.floor(content.length / 4)
 }
 
-function getRequestStatus(game: MendezGame): string {
+function getRequestStatus(game: SafeMendezGame): string {
   if (!game.gpt_decision) return 'Failed'
   if (!game.decision_reasoning) return 'Partial'
   return 'Success'
 }
 
-function getStatusClass(game: MendezGame): string {
+function getStatusClass(game: SafeMendezGame): string {
   const status = getRequestStatus(game)
   return {
     'Failed': 'text-red-600',
@@ -591,17 +885,24 @@ function getHeroEquity(heroCards: string, board: string): string {
 }
 
 function isConnectedBoard(ranks: string[]): boolean {
+  if (!ranks || !Array.isArray(ranks) || ranks.length < 2) return false
+  
   const rankOrder = '23456789TJQKA'
-  const values = ranks.map(r => rankOrder.indexOf(r)).sort((a, b) => a - b)
-  return values[values.length - 1] - values[0] <= 4
+  const values = ranks
+    .map(r => rankOrder.indexOf(r))
+    .filter((v): v is number => v !== -1)
+    .sort((a, b) => a - b)
+  
+  if (values.length < 2) return false
+  return Math.max(...values) - Math.min(...values) <= 4
 }
 
-function calculateSPR(game: MendezGame): string {
+function calculateSPR(game: SafeMendezGame): string {
   if (!game.effective_stack || !game.pot_size_bb || game.pot_size_bb === 0) return 'N/A'
   return (game.effective_stack / game.pot_size_bb).toFixed(1)
 }
 
-function getPositionType(game: MendezGame): string {
+function getPositionType(game: SafeMendezGame): string {
   const ipPositions = ['BTN', 'CO']
   const heroPos = game.hero_position
   const positions = game.positions || {}
@@ -614,123 +915,481 @@ function getPositionType(game: MendezGame): string {
   const laterPositions = ipPositions.filter(pos => activePositions.includes(pos))
   return laterPositions.length === 0 ? 'In Position' : 'Out of Position'
 }
+
+// Add new refs for filters and tabs
+const currentTab = ref('Overview')
+const dateFilter = ref('all')
+const positionFilter = ref('all')
+const streetFilter = ref('all')
+
+// Add computed property for filtered data
+const filteredHandHistory = computed<SafeMendezGame[]>(() => {
+  if (!mendezGames.value) return []
+  let filtered = [...mendezGames.value]
+
+  // Apply date filter
+  if (dateFilter.value !== 'all') {
+    const now = new Date()
+    const startDate = new Date()
+    
+    switch (dateFilter.value) {
+      case 'today':
+        startDate.setHours(0, 0, 0, 0)
+        break
+      case 'week':
+        startDate.setDate(now.getDate() - 7)
+        break
+      case 'month':
+        startDate.setMonth(now.getMonth() - 1)
+        break
+    }
+    
+    filtered = filtered.filter(h => new Date(h.created_at) >= startDate)
+  }
+
+  // Apply position filter
+  if (positionFilter.value !== 'all') {
+    filtered = filtered.filter(h => h.hero_position === positionFilter.value)
+  }
+
+  // Apply street filter
+  if (streetFilter.value !== 'all') {
+    filtered = filtered.filter(h => h.street === streetFilter.value)
+  }
+
+  return filtered
+})
+
+// Add computed properties for GPT stats
+const gptStats = computed<GPTStats>(() => {
+  const decisions = (filteredHandHistory.value || []).filter(h => h.gpt_decision)
+  if (decisions.length === 0) {
+    return {
+      successRate: '0',
+      avgConfidence: '0',
+      decisionDistribution: { fold: '0', call: '0', raise: '0' },
+      errorRate: '0'
+    }
+  }
+
+  // Calculate success rate
+  const successful = decisions.filter(h => h.gpt_decision && h.final_action === h.gpt_decision).length
+  const successRate = ((successful / decisions.length) * 100).toFixed(1)
+
+  // Calculate average confidence
+  const confidenceMap: Record<ConfidenceLevel, number> = { 
+    high: 1, 
+    medium: 0.5, 
+    low: 0.25 
+  }
+  const totalConfidence = decisions.reduce((sum, h) => {
+    const confidence = getConfidenceLevel(h)
+    return sum + (confidenceMap[confidence] || 0)
+  }, 0)
+  const avgConfidence = ((totalConfidence / decisions.length) * 100).toFixed(1)
+
+  // Calculate decision distribution
+  const counts = decisions.reduce((acc, h) => {
+    const action = h.gpt_decision || 'fold'
+    acc[action] = (acc[action] || 0) + 1
+    return acc
+  }, {} as Record<string, number>)
+
+  const decisionDistribution = {
+    fold: ((counts.fold || 0) / decisions.length * 100).toFixed(1),
+    call: ((counts.call || 0) / decisions.length * 100).toFixed(1),
+    raise: ((counts.raise || 0) / decisions.length * 100).toFixed(1)
+  }
+
+  // Calculate error rate
+  const errors = (filteredHandHistory.value || []).filter(h => !h.gpt_decision).length
+  const errorRate = ((errors / (filteredHandHistory.value || []).length) * 100).toFixed(1)
+
+  return {
+    successRate,
+    avgConfidence,
+    decisionDistribution,
+    errorRate
+  }
+})
+
+// Add new export functions
+function exportHandHistory() {
+  const data = filteredHandHistory.value.map(h => ({
+    date: formatDate(h.created_at),
+    street: h.street,
+    position: h.hero_position,
+    hand: h.hero_cards,
+    board: h.board_cards,
+    action: h.gpt_decision,
+    result: getResultText(h),
+    profitLoss: h.pot_size_bb
+  }))
+  
+  downloadJson(data, 'hand_history')
+}
+
+function exportPlayerStats() {
+  const data = positions.map((pos: Position) => ({
+    position: pos,
+    ...getPositionStats(pos)
+  }))
+  
+  downloadJson(data, 'player_stats')
+}
+
+function exportGPTAnalysis() {
+  const data = filteredHandHistory.value.map(h => ({
+    date: formatDate(h.created_at),
+    hand: h.hero_cards,
+    gptDecision: h.gpt_decision,
+    confidence: getConfidenceLevel(h),
+    reasoning: h.decision_reasoning,
+    wasCorrect: h.final_action === h.gpt_decision
+  }))
+  
+  downloadJson(data, 'gpt_analysis')
+}
+
+function exportFullDatabase() {
+  const data = {
+    handHistory: filteredHandHistory.value,
+    playerStats: positions.map((pos: Position) => ({
+      position: pos,
+      ...getPositionStats(pos)
+    })),
+    gptStats: gptStats.value
+  }
+  
+  downloadJson(data, 'full_database')
+}
+
+function getPositionStats(position: Position): PositionStats {
+  const positionHands = filteredHandHistory.value.filter(h => h.hero_position === position)
+  const total = positionHands.length
+  if (total === 0) return { total: 0, winRate: '0', vpip: '0', pfr: '0' }
+
+  const wins = positionHands.filter(h => h.pot_size_bb > 0).length
+  const vpipHands = positionHands.filter(h => 
+    h.street === 'preflop' && ['call', 'raise'].includes(h.final_action || '')
+  ).length
+  const pfrHands = positionHands.filter(h => 
+    h.street === 'preflop' && h.final_action === 'raise'
+  ).length
+
+  return {
+    total,
+    winRate: ((wins / total) * 100).toFixed(1),
+    vpip: ((vpipHands / total) * 100).toFixed(1),
+    pfr: ((pfrHands / total) * 100).toFixed(1)
+  }
+}
+
+function getResultText(hand: SafeMendezGame): string {
+  if (hand.final_action === 'fold') {
+    return 'Fold'
+  }
+  if (!hand.board_cards) {
+    return 'Pending'
+  }
+  return hand.pot_size_bb > 0 ? 'Win' : 'Loss'
+}
+
+function downloadJson(data: any, filename: string) {
+  const jsonString = JSON.stringify(data, null, 2)
+  const blob = new Blob([jsonString], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `${filename}_${new Date().toISOString().split('T')[0]}.json`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+}
+
+// Replace the currentAnalysis ref definition with:
+const currentAnalyses = ref<Array<{
+  markdown: string
+  action: string | null
+  confidence: string
+  reasoning: string
+}> | null>(null)
+
+// Update the handleAnalysis function:
+async function handleAnalysis(result: any) {
+  if (result.success) {
+    // Generate analysis for all games
+    const analyses = mendezGames.value.map(game => ({
+      markdown: generateAnalysisMarkdown(game),
+      action: game.gpt_decision,
+      confidence: getConfidenceLevel(game),
+      reasoning: game.decision_reasoning || 'No reasoning provided'
+    }))
+
+    // Store all analyses
+    currentAnalyses.value = analyses
+  }
+}
+
+// Helper function to generate markdown for a game
+function generateAnalysisMarkdown(game: SafeMendezGame): string {
+  // Get board texture and draws
+  const texture = getBoardTexture(game.board_cards || '')
+  const draws = getPossibleDraws(game.board_cards || '')
+  const equity = getHeroEquity(game.hero_cards, game.board_cards || '')
+  const spr = calculateSPR(game)
+  const positionType = getPositionType(game)
+
+  return `# Poker Hand Analysis
+
+## Current Situation
+- **Position:** ${game.hero_position} (${positionType})
+- **Hero Cards:** ${game.hero_cards}
+- **Board:** ${game.board_cards || 'Preflop'}
+- **Street:** ${game.street}
+- **Pot Size:** ${game.pot_size_bb}BB
+- **To Call:** ${game.to_call_bb}BB
+- **Effective Stack:** ${game.effective_stack}BB
+- **SPR:** ${spr}
+
+## Board Analysis
+- **Texture:** ${texture}
+- **Possible Draws:** ${draws}
+- **Hero Equity:** ${equity}%
+
+## Action History
+\`\`\`
+${game.action_history?.map(a => `${a.player}: ${a.action}${a.amount ? ` ${a.amount}BB` : ''}`).join('\n') || 'No action history'}
+\`\`\`
+
+## Final Decision
+- **Action:** ${game.gpt_decision}
+- **Confidence:** ${getConfidenceLevel(game)}
+- **Reasoning:** ${game.decision_reasoning || 'No reasoning provided'}
+`
+}
+
+// Add new ref for analysis expansion
+const isAnalysisExpanded = ref(true)
+
+// Add new helper function for decision styling
+function getDecisionClass(decision: string | null | undefined): string {
+  if (!decision) return 'text-gray-400'
+  return {
+    'fold': 'text-red-600',
+    'call': 'text-blue-600',
+    'raise': 'text-green-600'
+  }[decision] || 'text-gray-600'
+}
+
+// Add new helper function for result styling
+function getResultClass(game: SafeMendezGame): string {
+  if (game.final_action === 'fold') {
+    return 'text-red-600'
+  }
+  if (game.pot_size_bb > 0) {
+    return 'text-green-600'
+  }
+  return 'text-red-600'
+}
+
+// Add new computed properties for statistics
+const streetDistribution = computed(() => {
+  const total = filteredHandHistory.value.length
+  return ['preflop', 'flop', 'turn', 'river'].map(street => ({
+    street,
+    percentage: total ? ((filteredHandHistory.value.filter(g => g.street === street).length / total) * 100).toFixed(1) : '0'
+  }))
+})
+
+const positionDistribution = computed(() => {
+  const total = filteredHandHistory.value.length
+  return positions.map(pos => ({
+    position: pos,
+    percentage: total ? ((filteredHandHistory.value.filter(g => g.hero_position === pos).length / total) * 100).toFixed(1) : '0'
+  }))
+})
+
+const decisionDistribution = computed(() => {
+  const total = filteredHandHistory.value.length
+  return ['fold', 'call', 'raise'].map(decision => ({
+    decision,
+    percentage: total ? ((filteredHandHistory.value.filter(g => g.gpt_decision === decision).length / total) * 100).toFixed(1) : '0'
+  }))
+})
+
+const boardTextureDistribution = computed(() => {
+  const boardHands = filteredHandHistory.value.filter(g => g.board_cards)
+  const total = boardHands.length
+  return ['Dry', 'Wet', 'Very Wet', 'Monotone', 'Paired'].map(texture => ({
+    texture,
+    percentage: total ? ((boardHands.filter(g => getBoardTexture(g.board_cards || '') === texture).length / total) * 100).toFixed(1) : '0'
+  }))
+})
+
+const stackStats = computed(() => {
+  const total = filteredHandHistory.value.length
+  if (!total) return { avgStack: '0', avgSPR: '0' }
+  
+  return {
+    avgStack: (filteredHandHistory.value.reduce((sum, g) => sum + g.effective_stack, 0) / total).toFixed(1),
+    avgSPR: (filteredHandHistory.value.reduce((sum, g) => sum + Number(calculateSPR(g)), 0) / total).toFixed(1)
+  }
+})
+
+const avgProfit = computed(() => {
+  const total = filteredHandHistory.value.length
+  if (!total) return '0'
+  return (filteredHandHistory.value.reduce((sum, g) => sum + g.pot_size_bb, 0) / total).toFixed(1)
+})
 </script>
 
 <style scoped>
+/* Modern Color Palette */
+:root {
+  --primary-color: #3b82f6;     /* Vibrant Blue */
+  --secondary-color: #10b981;   /* Emerald Green */
+  --accent-color: #6366f1;      /* Indigo */
+  --background-light: #f8fafc;  /* Soft Gray-Blue */
+  --text-primary: #1f2937;      /* Dark Gray */
+  --text-secondary: #6b7280;    /* Medium Gray */
+}
+
 .admin-page {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem 1rem;
+  @apply bg-background-light min-h-screen p-6 font-sans antialiased;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(16, 185, 129, 0.05) 100%);
 }
 
-.unauthorized {
-  text-align: center;
-  padding: 4rem 2rem;
+.admin-content {
+  @apply max-w-7xl mx-auto space-y-6;
 }
 
+/* Enhanced Typography */
+h1 {
+  @apply text-3xl font-extrabold text-text-primary mb-6 tracking-tight;
+  background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Card Design */
 .admin-section {
-  background: white;
-  padding: 1.5rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  @apply bg-white rounded-2xl shadow-lg border border-gray-100 p-6 transition-all duration-300;
+  box-shadow: 0 10px 25px rgba(59, 130, 246, 0.1);
+  transform: translateY(0);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
+.admin-section:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 35px rgba(59, 130, 246, 0.15);
+}
+
+/* Button Styles */
+.refresh-btn, .export-btn, .debug-btn {
+  @apply px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-300 ease-in-out;
+  background: linear-gradient(to right, var(--primary-color), var(--accent-color));
+  color: white;
+  box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2);
+  transform: translateY(0);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.refresh-btn:hover, .export-btn:hover, .debug-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 8px rgba(59, 130, 246, 0.3);
+}
+
+/* Tab Design */
+.tab-buttons {
+  @apply flex space-x-2 mb-6 bg-gray-100 p-1 rounded-xl;
+}
+
+.tab-btn {
+  @apply px-4 py-2 text-sm font-medium text-gray-600 rounded-lg transition-all duration-300;
+}
+
+.tab-btn.active {
+  @apply bg-white text-primary-color shadow-md;
+}
+
+/* Stats Grid */
 .stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
+  @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6;
 }
 
 .stat-item {
-  padding: 1.5rem;
-  background: #f8fafc;
-  border-radius: 8px;
-  text-align: center;
+  @apply bg-white rounded-2xl p-6 text-center shadow-md border border-gray-100 transition-all duration-300;
+  transform: scale(1);
+  transition: transform 0.3s, box-shadow 0.3s;
 }
 
-.header-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
+.stat-item:hover {
+  transform: scale(1.03);
+  box-shadow: 0 10px 25px rgba(16, 185, 129, 0.1);
 }
 
-.refresh-btn {
-  padding: 0.5rem 1rem;
-  background-color: #3b82f6;
-  color: white;
-  border-radius: 4px;
-  font-size: 0.875rem;
-  transition: background-color 0.2s;
+.stat-value {
+  @apply text-3xl font-bold mt-2;
+  background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
-.expand-btn {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.875rem;
-  color: #64748b;
-  background: transparent;
-  border: 1px solid #e2e8f0;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.2s;
+/* Table Styles */
+.table-container {
+  @apply bg-white rounded-2xl shadow-lg overflow-hidden;
 }
 
-.expand-enter-active,
-.expand-leave-active {
-  transition: all 0.3s ease-in-out;
-  max-height: 1000px;
-  opacity: 1;
-  overflow: hidden;
+.table-header {
+  @apply bg-gray-50 px-6 py-4 border-b border-gray-200;
 }
 
-.expand-enter-from,
-.expand-leave-to {
-  max-height: 0;
-  opacity: 0;
-  overflow: hidden;
+.table-row {
+  @apply hover:bg-gray-50 transition-colors duration-200;
 }
 
-.debug-btn {
-  @apply px-2 py-1 text-xs rounded border border-gray-300 hover:bg-gray-100;
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .admin-page {
+    @apply p-3;
+  }
+
+  .stats-grid {
+    @apply grid-cols-1;
+  }
+
+  .tab-buttons {
+    @apply flex-col space-x-0 space-y-2;
+  }
+
+  .tab-btn {
+    @apply w-full text-center;
+  }
 }
 
-.debug-btn.active {
-  @apply bg-blue-100 border-blue-300 text-blue-700;
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.debug-section {
-  @apply space-y-4;
+.fade-enter-active {
+  animation: fadeIn 0.5s ease-out;
 }
 
-.debug-card {
-  @apply bg-gray-50 rounded-lg p-4 space-y-4;
+/* Debug and Export Sections */
+.debug-section, .export-section {
+  @apply bg-white rounded-2xl p-6 border border-gray-100 shadow-md;
 }
 
-.debug-header {
-  @apply flex justify-between items-center border-b pb-2;
+.export-btn {
+  @apply w-full justify-center flex items-center space-x-2;
 }
 
-.debug-content {
-  @apply space-y-2;
-}
-
-.debug-content h5 {
-  @apply text-sm font-medium text-gray-700;
-}
-
-.debug-pre {
-  @apply bg-gray-100 p-2 rounded text-xs font-mono overflow-x-auto max-h-40 overflow-y-auto whitespace-pre-wrap break-all;
-}
-
-.debug-pre::-webkit-scrollbar {
-  @apply w-2 h-2;
-}
-
-.debug-pre::-webkit-scrollbar-track {
-  @apply bg-gray-100 rounded;
-}
-
-.debug-pre::-webkit-scrollbar-thumb {
-  @apply bg-gray-300 rounded hover:bg-gray-400;
+.export-btn svg {
+  @apply w-5 h-5 mr-2;
 }
 </style> 

@@ -89,11 +89,11 @@ const OPPONENT_STRATEGIES: Record<OpponentType['type'], OpponentType> = {
 }
 
 interface HandCategory {
-  type: 'Nuts' | 'Strong' | 'Good' | 'Draw' | 'Weak'
+  type: 'Nuts' | 'Strong' | 'Mediocre' | 'Draw' | 'Weak'
   examples: string[]
   strategy: {
-    vsAggressive: string
-    vsPassive: string
+    inPosition: string
+    outOfPosition: string
   }
 }
 
@@ -102,42 +102,75 @@ const HAND_CATEGORIES: Record<HandCategory['type'], HandCategory> = {
     type: 'Nuts',
     examples: ['Set+', 'Two pair+', 'Nut flush'],
     strategy: {
-      vsAggressive: 'Slowplay occasionally',
-      vsPassive: 'Bet for value'
+      inPosition: 'Slowplay occasionally',
+      outOfPosition: 'Bet for value'
     }
   },
   'Strong': {
     type: 'Strong',
     examples: ['Top pair good kicker', 'Overpair'],
     strategy: {
-      vsAggressive: 'Bet for value',
-      vsPassive: 'Bet for value'
+      inPosition: 'Bet for value',
+      outOfPosition: 'Bet for value'
     }
   },
-  'Good': {
-    type: 'Good',
+  'Mediocre': {
+    type: 'Mediocre',
     examples: ['Top pair weak kicker', 'Second pair'],
     strategy: {
-      vsAggressive: 'Check/call or small bet',
-      vsPassive: 'Bet for thin value'
+      inPosition: 'Check/call or small bet',
+      outOfPosition: 'Bet for thin value'
     }
   },
   'Draw': {
     type: 'Draw',
     examples: ['Flush draw', 'Open-ended straight draw'],
     strategy: {
-      vsAggressive: 'Check/call',
-      vsPassive: 'Semi-bluff'
+      inPosition: 'Check/call',
+      outOfPosition: 'Semi-bluff'
     }
   },
   'Weak': {
     type: 'Weak',
     examples: ['No pair no draw', 'Bottom pair'],
     strategy: {
-      vsAggressive: 'Check/fold',
-      vsPassive: 'Check behind'
+      inPosition: 'Check/fold',
+      outOfPosition: 'Check behind'
     }
   }
+}
+
+// Helper function to check for backdoor draws
+function hasBackdoorDraws(holeCards: string, board: string): boolean {
+  const ranks = [...board.match(/[2-9TJQKA]/g) || [], ...holeCards.match(/[2-9TJQKA]/g) || []]
+  const suits = [...board.match(/[♠♣♥♦]/g) || [], ...holeCards.match(/[♠♣♥♦]/g) || []]
+  
+  // Check for backdoor flush draws (2 cards of same suit)
+  const suitCounts = suits.reduce((acc, s) => {
+    acc[s] = (acc[s] || 0) + 1
+    return acc
+  }, {} as Record<string, number>)
+  
+  const hasBackdoorFlush = Object.values(suitCounts).some(count => count >= 2)
+  
+  // Check for backdoor straight draws (2 connected cards)
+  const hasBackdoorStraight = ranks.some((r, i) => {
+    if (i === 0) return false
+    const curr = getRankValue(r)
+    const prev = getRankValue(ranks[i - 1])
+    return Math.abs(curr - prev) <= 2
+  })
+  
+  return hasBackdoorFlush || hasBackdoorStraight
+}
+
+// Helper function to convert card ranks to numeric values
+function getRankValue(rank: string): number {
+  const rankValues: Record<string, number> = {
+    '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9,
+    'T': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14
+  }
+  return rankValues[rank] || 0
 }
 
 export function getBoardTexture(board: string): BoardTexture['type'] {
@@ -196,6 +229,39 @@ interface FlopAdvice {
   reasoning: string
 }
 
+// Add these utility functions at the top of the file
+function mapToStandardPosition(position: string): Position {
+  const positionMap: Record<string, Position> = {
+    'UTG+1': 'MP',
+    'UTG+2': 'MP',
+    'MP+1': 'MP',
+    'MP+2': 'CO',
+    'HJ': 'CO',
+    'LJ': 'MP',
+    'UTG': 'UTG',
+    'MP': 'MP',
+    'CO': 'CO',
+    'BTN': 'BTN',
+    'SB': 'SB',
+    'BB': 'BB'
+  }
+  
+  return positionMap[position] || 'MP'
+}
+
+// Define a basic variance generator if not imported
+const StrategyVarianceGenerator = {
+  generateVariance: (context: any) => ({
+    aggression: 0.5,
+    bluffFrequency: 0.3,
+    tightness: 0.6
+  }),
+  shouldBluff: (variance: any) => Math.random() < variance.bluffFrequency
+}
+
+// Modify the type definitions
+type Position = 'UTG' | 'MP' | 'CO' | 'BTN' | 'SB' | 'BB'
+
 export function getFlopAdvice(
   holeCards: string,
   board: string,
@@ -204,33 +270,90 @@ export function getFlopAdvice(
   effectiveStack: number,
   opponentType: OpponentType['type'],
   hasBetInFront: boolean,
-  betSize?: number
+  betSize?: number,
+  context?: {
+    tournamentStage: 'Early' | 'Middle' | 'Late' | 'Final Table',
+    stackSize: number
+  }
 ): FlopAdvice {
+  // Generate strategy variance if context is provided
+  const variance = context 
+    ? StrategyVarianceGenerator.generateVariance({
+        tournamentStage: context.tournamentStage,
+        stackSize: context.stackSize,
+        position: mapToStandardPosition(position),
+        opponentType: opponentType || 'Tight-Passive'
+      })
+    : { 
+        aggression: 0.5, 
+        bluffFrequency: 0.3, 
+        tightness: 0.6 
+      }
+
   const boardTexture = getBoardTexture(board)
   const handStrength = getHandStrength(holeCards, board)
-  const texture = BOARD_TEXTURES[boardTexture]
-  const opponent = OPPONENT_STRATEGIES[opponentType]
-  const hand = HAND_CATEGORIES[handStrength]
+  const texture = BOARD_TEXTURES[boardTexture] || BOARD_TEXTURES['Dry']
+  const opponent = OPPONENT_STRATEGIES[opponentType] || OPPONENT_STRATEGIES['Tight-Passive']
   
+  // Adjust c-bet frequency based on variance
+  const shouldCBet = Math.random() < (
+    texture.cBetFrequency * 
+    (1 + (variance.aggression - 0.5)) * 
+    (position === 'BTN' ? 1.1 : 1)
+  )
+
   // Facing a bet
   if (hasBetInFront && betSize) {
     const potOdds = betSize / (potSize + betSize)
+    const isInPosition = position === 'BTN' || position === 'CO'
     
+    // More aggressive raises with higher variance
     if (handStrength === 'Nuts' || handStrength === 'Strong') {
+      const raiseSize = isInPosition 
+        ? betSize * (2.5 + variance.aggression) 
+        : betSize * (2 + variance.aggression)
+      
       return {
         action: 'raise',
-        sizing: betSize * 3,
+        sizing: raiseSize,
         confidence: 'high',
-        reasoning: `Strong hand on ${boardTexture} board vs ${opponentType}`
+        reasoning: `Strong hand on ${boardTexture} board, ${isInPosition ? 'exploiting position' : 'protecting hand'}`
       }
     }
     
-    if (handStrength === 'Draw' && potOdds < 0.3) {
+    // Draw handling with variance
+    if (handStrength === 'Draw') {
+      // More likely to semi-bluff raise with higher aggression
+      if (isInPosition && potOdds < (0.35 - variance.tightness * 0.1)) {
+        const raiseSize = betSize * (2 + variance.aggression)
+        return {
+          action: 'raise',
+          sizing: raiseSize,
+          confidence: 'medium',
+          reasoning: `Semi-bluff raising with draw in position`
+        }
+      }
+      
+      if (potOdds < 0.3) {
+        return {
+          action: 'call',
+          sizing: betSize,
+          confidence: 'high',
+          reasoning: `Good drawing hand with correct pot odds`
+        }
+      }
+    }
+    
+    // Floating with backdoor draws more often with higher aggression
+    if (isInPosition && 
+        handStrength === 'Mediocre' && 
+        hasBackdoorDraws(holeCards, board) && 
+        Math.random() < variance.aggression) {
       return {
         action: 'call',
         sizing: betSize,
-        confidence: 'high',
-        reasoning: `Good drawing hand with correct pot odds`
+        confidence: 'medium',
+        reasoning: `Floating with backdoor draws in position`
       }
     }
     
@@ -238,15 +361,15 @@ export function getFlopAdvice(
       action: 'fold',
       sizing: 0,
       confidence: 'high',
-      reasoning: `Too weak to continue on ${boardTexture} board vs ${opponentType}`
+      reasoning: `Too weak to continue on ${boardTexture} board`
     }
   }
   
   // Betting as aggressor
-  const shouldCBet = Math.random() < texture.cBetFrequency
-  
-  if (handStrength === 'Nuts' || handStrength === 'Strong') {
-    const sizing = texture.betSizing.strong * potSize
+  if ((handStrength === 'Nuts' || handStrength === 'Strong') && shouldCBet) {
+    const sizing = texture.betSizing.strong * potSize * 
+      (1 + (variance.aggression - 0.5) * 0.2)
+    
     return {
       action: 'bet',
       sizing,
@@ -255,23 +378,34 @@ export function getFlopAdvice(
     }
   }
   
-  if (handStrength === 'Draw' && shouldCBet) {
-    const sizing = texture.betSizing.bluff * potSize
+  // Semi-bluffing with draws, influenced by variance
+  if ((handStrength === 'Draw' || 
+       (hasBackdoorDraws(holeCards, board) && 
+        Math.random() < variance.bluffFrequency)) && 
+      shouldCBet) {
+    const sizing = texture.betSizing.bluff * potSize * 
+      (1 + (variance.aggression - 0.5) * 0.2)
+    
     return {
       action: 'bet',
       sizing,
       confidence: 'medium',
-      reasoning: `Semi-bluffing with draw on ${boardTexture} board`
+      reasoning: `Semi-bluffing with ${handStrength === 'Draw' ? 'strong' : 'backdoor'} draws`
     }
   }
   
-  if (shouldCBet && opponentType === 'Tight-Passive') {
-    const sizing = texture.betSizing.bluff * potSize
+  // Pure bluffs on dry boards, controlled by variance
+  if (position === 'BTN' && 
+      boardTexture === 'Dry' && 
+      shouldCBet && 
+      Math.random() < variance.bluffFrequency) {
+    const sizing = texture.betSizing.bluff * potSize * 0.8
+    
     return {
       action: 'bet',
       sizing,
-      confidence: 'medium',
-      reasoning: `Bluffing on ${boardTexture} board vs tight-passive opponent`
+      confidence: 'low',
+      reasoning: `Bluffing dry board with range advantage`
     }
   }
   
@@ -279,6 +413,6 @@ export function getFlopAdvice(
     action: 'check',
     sizing: 0,
     confidence: 'high',
-    reasoning: `Checking weak hand on ${boardTexture} board`
+    reasoning: `Checking ${handStrength} hand on ${boardTexture} board`
   }
 } 

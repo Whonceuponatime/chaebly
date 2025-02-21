@@ -13,89 +13,96 @@ const ADJUSTED_PREFLOP_RANGES: Record<Position, HandRange> = {
       // Premium hands
       'AA', 'KK', 'QQ', 'JJ', 'TT', '99', '88', '77', '66', '55', '44', '33', '22',
       'AK', 'AQ', 'AJ', 'AT', 'A9', 'A8', 'A7', 'A6', 'A5', 'A4', 'A3', 'A2',
-      'KQ', 'KJ', 'KT', 'K9', 'K8', 'K7', 'K6',
-      'QJ', 'QT', 'Q9', 'Q8',
-      'JT', 'J9', 'J8',
-      'T9', 'T8',
-      '98', '87', '76', '65', '54', '43'  // Added more suited connectors
+      'KQ', 'KJ', 'KT', 'K9', 'K8', 'K7', 'K6', 'K5s',
+      'QJ', 'QT', 'Q9', 'Q8', 'Q7s',
+      'JT', 'J9', 'J8', 'J7s',
+      'T9', 'T8', 'T7s',
+      '98', '87', '76', '65', '54', '43', '32s'
     ],
     call: [
-      // Only call vs strong 3-bets
-      'TT-88', 'AQ', 'AJs'
+      // Defending vs 3-bets with good implied odds
+      'TT-88', 'AQ', 'AJs', 'KQs', 'JTs', 'T9s', '98s', '87s', '76s'
     ],
     fold: ['Rest']
   },
   CO: {
     raise: [
-      // Wider range in CO
-      'AA', 'KK', 'QQ', 'JJ', 'TT', '99', '88', '77', '66', '55',
-      'AK', 'AQ', 'AJ', 'AT', 'A9', 'A8',
-      'KQ', 'KJ', 'KT', 'K9',
-      'QJ', 'QT', 'Q9',  // Added QT, Q9
-      'JT', 'J9',
-      'T9', '98', '87', '76'
+      // Wider range in CO with more semi-bluffs
+      'AA', 'KK', 'QQ', 'JJ', 'TT', '99', '88', '77', '66', '55', '44',
+      'AK', 'AQ', 'AJ', 'AT', 'A9', 'A8', 'A7s', 'A6s', 'A5s',
+      'KQ', 'KJ', 'KT', 'K9', 'K8s',
+      'QJ', 'QT', 'Q9', 'Q8s',
+      'JT', 'J9', 'J8s',
+      'T9', '98', '87', '76', '65s'
     ],
     call: [
-      // Strong hands vs 3-bets
-      'JJ-99', 'AQ', 'AJs'
+      // More hands to call 3-bets
+      'JJ-99', 'AQ', 'AJs', 'KQs', 'QJs', 'JTs'
     ],
     fold: ['Rest']
   },
   MP: {
     raise: [
-      // Tighter but still value-oriented
-      'AA', 'KK', 'QQ', 'JJ', 'TT', '99', '88',
-      'AK', 'AQ', 'AJ', 'AT',
-      'KQ', 'KJ',
-      'QJ'
+      // Added more value hands and some suited connectors
+      'AA', 'KK', 'QQ', 'JJ', 'TT', '99', '88', '77',
+      'AK', 'AQ', 'AJ', 'AT', 'A9s', 'A8s',
+      'KQ', 'KJ', 'KTs',
+      'QJ', 'QTs',
+      'JTs', 'T9s'
     ],
     call: [
       // Premium hands vs 3-bets
-      'QQ-JJ', 'AK', 'AQs'
+      'QQ-JJ', 'AK', 'AQs', 'KQs'
     ],
     fold: ['Rest']
   },
   UTG: {
     raise: [
-      // Very tight range
-      'AA', 'KK', 'QQ', 'JJ', 'TT',
-      'AK', 'AQ', 'AJ',
-      'KQ'
+      // Slightly wider but still tight range
+      'AA', 'KK', 'QQ', 'JJ', 'TT', '99',
+      'AK', 'AQ', 'AJ', 'ATs',
+      'KQ', 'KJs',
+      'QJs'
     ],
     call: [
       // Only strongest hands vs 3-bets
-      'KK+', 'AK'
+      'KK+', 'AK', 'AQs'
     ],
     fold: ['Rest']
   },
   SB: {
     raise: [
-      // Polarized range
-      'AA', 'KK', 'QQ', 'JJ', 'TT', '99', '88',
-      'AK', 'AQ', 'AJ', 'AT', 'A9s', 'A8s',
-      'KQ', 'KJ', 'KT',
-      'QJ', 'QT',
-      'JT'
+      // More aggressive 3-bet or fold strategy
+      'AA', 'KK', 'QQ', 'JJ', 'TT', '99', '88', '77',
+      'AK', 'AQ', 'AJ', 'AT', 'A9s', 'A8s', 'A7s', 'A6s', 'A5s',
+      'KQ', 'KJ', 'KT', 'K9s',
+      'QJ', 'QT', 'Q9s',
+      'JT', 'J9s',
+      'T9s', '98s', '87s'
     ],
     call: [
-      // Rarely call, mostly raise or fold
-      'TT+', 'AQ+'
+      // Very selective calling range
+      'TT+', 'AQ+', 'AJs'
     ],
     fold: ['Rest']
   },
   BB: {
     raise: [
-      // 3-bet or fold strategy
-      'AA', 'KK', 'QQ', 'JJ', 'TT',
-      'AK', 'AQ', 'AJs+',
-      'KQs'
+      // More 3-betting for value and defense
+      'AA', 'KK', 'QQ', 'JJ', 'TT', '99',
+      'AK', 'AQ', 'AJs+', 'ATs',
+      'KQs', 'KJs',
+      'QJs'
     ],
     call: [
-      // Tighter BB defense vs raises
-      'JJ-77',  // Pairs for set mining
-      'AJ+',    // Strong Ax hands
-      'KQ+',    // Strong broadways
-      'T9s+'    // Suited connectors
+      // Wider defense vs steals
+      'JJ-55',
+      'AJ+',
+      'KQ+',
+      'T9s+',
+      'A5s-A2s',
+      'K9s+',
+      'Q9s+'
     ],
     fold: ['Rest']
   }
@@ -259,7 +266,7 @@ function hasConnectedCards(ranks: string[]): boolean {
   return values[values.length - 1] - values[0] <= 4
 }
 
-function getRankValue(rank: string): number {
+export function getRankValue(rank: string): number {
   return '23456789TJQKA'.indexOf(rank)
 }
 
@@ -286,8 +293,32 @@ function isPremiumHand(hand: string): boolean {
          (suited && suitedPremiums.includes(sortedRanks))
 }
 
-export function getPreflopAction(hand: string, position: Position): 'raise' | 'call' | 'fold' {
-  if (ADJUSTED_PREFLOP_RANGES[position].raise.includes(hand)) return 'raise'
-  if (ADJUSTED_PREFLOP_RANGES[position].call.includes(hand)) return 'call'
+// Map non-standard positions to standard ones
+export function mapToStandardPosition(position: string): 'UTG' | 'MP' | 'CO' | 'BTN' | 'SB' | 'BB' {
+  const positionMap: Record<string, 'UTG' | 'MP' | 'CO' | 'BTN' | 'SB' | 'BB'> = {
+    'UTG+1': 'MP',
+    'UTG+2': 'MP',
+    'MP+1': 'MP',
+    'MP+2': 'CO',
+    'HJ': 'CO',
+    'LJ': 'MP',
+    'UTG': 'UTG',
+    'MP': 'MP',
+    'CO': 'CO',
+    'BTN': 'BTN',
+    'SB': 'SB',
+    'BB': 'BB'
+  }
+  
+  return positionMap[position] || 'MP' // Default to MP if unknown position
+}
+
+export function getPreflopAction(hand: string, position: string): 'raise' | 'call' | 'fold' {
+  // Map the position to a standard one
+  const standardPosition = mapToStandardPosition(position)
+  
+  // Use the standard position to look up the ranges
+  if (ADJUSTED_PREFLOP_RANGES[standardPosition].raise.includes(hand)) return 'raise'
+  if (ADJUSTED_PREFLOP_RANGES[standardPosition].call.includes(hand)) return 'call'
   return 'fold'
 } 

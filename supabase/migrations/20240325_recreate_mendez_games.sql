@@ -7,25 +7,32 @@ CREATE TABLE mendez_games (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
     hand_id TEXT NOT NULL,
     street TEXT NOT NULL CHECK (street IN ('preflop', 'flop', 'turn', 'river')),
+    players TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
     hero_position TEXT NOT NULL,
     hero_cards TEXT NOT NULL,
     board_cards TEXT,
     pot_size_bb DECIMAL(10,2) NOT NULL,
     to_call_bb DECIMAL(10,2) NOT NULL,
     current_bet_bb DECIMAL(10,2) NOT NULL,
-    active_players TEXT[] NOT NULL,
+    active_players TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
     action_on TEXT NOT NULL,
     last_action TEXT,
     last_bet_size_bb DECIMAL(10,2),
     effective_stack DECIMAL(10,2) NOT NULL DEFAULT 0,
-    gpt_decision TEXT NOT NULL,
-    decision_reasoning TEXT NOT NULL
+    gpt_decision TEXT,
+    decision_reasoning TEXT,
+    final_action TEXT,
+    positions JSONB DEFAULT '{}'::JSONB,
+    player_stacks JSONB DEFAULT '{}'::JSONB,
+    action_history JSONB[] DEFAULT ARRAY[]::JSONB[]
 );
 
 -- Add indexes
 CREATE INDEX idx_mendez_games_hand_id ON mendez_games(hand_id);
 CREATE INDEX idx_mendez_games_street ON mendez_games(street);
 CREATE INDEX idx_mendez_games_created ON mendez_games(created_at);
+CREATE INDEX idx_mendez_games_players ON mendez_games USING GIN(players);
+CREATE INDEX idx_mendez_games_active_players ON mendez_games USING GIN(active_players);
 
 -- Enable RLS
 ALTER TABLE mendez_games ENABLE ROW LEVEL SECURITY;

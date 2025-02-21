@@ -9,8 +9,11 @@ ALTER TABLE mendez_games
 
 -- Add a check constraint to ensure gpt_decision is either NULL or a valid action
 ALTER TABLE mendez_games
+  DROP CONSTRAINT IF EXISTS valid_gpt_decision;
+
+ALTER TABLE mendez_games
   ADD CONSTRAINT valid_gpt_decision 
-  CHECK (gpt_decision IS NULL OR gpt_decision IN ('fold', 'call', 'raise'));
+  CHECK (gpt_decision IS NULL OR LOWER(gpt_decision) IN ('fold', 'call', 'raise'));
 
 -- Add index for faster queries
 CREATE INDEX IF NOT EXISTS idx_mendez_games_gpt_decision 

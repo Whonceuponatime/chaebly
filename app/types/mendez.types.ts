@@ -64,11 +64,20 @@ export interface MendezGame {
   action_on: string
   last_action?: string | null
   last_bet_size_bb?: number | null
-  player_stacks: Record<string, number>
+  player_stacks?: Record<string, number>
   effective_stack: number
-  gpt_decision: string | null
+  gpt_decision: string
   decision_reasoning: string
   final_action?: string | null
+  positions?: Record<string, string>
+  action_history?: Array<{
+    player: string
+    position?: string
+    street?: string
+    action: string
+    amount: number
+    timestamp?: string
+  }>
 }
 
 export interface MendezPlayerAnalysis {
@@ -95,9 +104,11 @@ export interface BettingStatsData {
 export interface ChartDataset {
   label?: string
   data: number[]
-  backgroundColor: string | string[]
-  borderColor: string | string[]
-  borderWidth: number
+  backgroundColor?: string | string[]
+  borderColor?: string | string[]
+  borderWidth?: number
+  pointRadius?: number
+  tension?: number
 }
 
 export interface ChartData {
@@ -110,7 +121,12 @@ export interface ChartOptions {
   maintainAspectRatio?: boolean
   plugins?: {
     legend?: {
-      position?: 'top' | 'bottom' | 'left' | 'right'
+      display?: boolean
+      position?: 'top' | 'right' | 'bottom' | 'left'
+      labels?: {
+        boxWidth?: number
+        padding?: number
+      }
     }
     tooltip?: {
       callbacks?: {
@@ -121,6 +137,14 @@ export interface ChartOptions {
   scales?: {
     y?: {
       beginAtZero?: boolean
+      stacked?: boolean
+      title?: {
+        display?: boolean
+        text?: string
+      }
+    }
+    x?: {
+      stacked?: boolean
       title?: {
         display?: boolean
         text?: string

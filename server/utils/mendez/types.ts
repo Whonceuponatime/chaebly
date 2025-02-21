@@ -72,6 +72,8 @@ export interface PlayerStats {
   showdown_hands: number
   hands_won: number
   aggression_factor: number
+  vpip_count: number
+  pfr_count: number
   vpip_percentage: number
   pfr_percentage: number
   showdown_hands_history: Array<{
@@ -89,7 +91,6 @@ export interface PlayerStats {
     won: number
   }>
   last_seen_at: string
-  bb_per_100_hands: number
   total_bluffs: number
   successful_bluffs: number
   check_raise_attempts: number

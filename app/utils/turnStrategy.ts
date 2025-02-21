@@ -12,7 +12,7 @@ const TURN_HAND_CATEGORIES: Record<TurnHandCategory['type'], TurnHandCategory> =
     type: 'Nuts',
     examples: ['Nut flush', 'Set+', 'Top two pair'],
     strategy: {
-      inPosition: 'Bet big (70-100% pot)',
+      inPosition: 'Bet big (75-100% pot)',
       outOfPosition: 'Check-raise or bet big'
     }
   },
@@ -20,7 +20,7 @@ const TURN_HAND_CATEGORIES: Record<TurnHandCategory['type'], TurnHandCategory> =
     type: 'Strong',
     examples: ['Two pair', 'Overpair', 'Top pair strong kicker'],
     strategy: {
-      inPosition: 'Bet medium (50-75% pot)',
+      inPosition: 'Bet medium (60-80% pot)',
       outOfPosition: 'Bet for value or check-call'
     }
   },
@@ -28,7 +28,7 @@ const TURN_HAND_CATEGORIES: Record<TurnHandCategory['type'], TurnHandCategory> =
     type: 'Mediocre',
     examples: ['Top pair weak kicker', 'Second pair', 'Pocket pair below board'],
     strategy: {
-      inPosition: 'Small bet (25-50% pot) or check',
+      inPosition: 'Small bet (30-50% pot) or check',
       outOfPosition: 'Check-call or check-fold'
     }
   },
@@ -36,23 +36,23 @@ const TURN_HAND_CATEGORIES: Record<TurnHandCategory['type'], TurnHandCategory> =
     type: 'StrongDraw',
     examples: ['Flush draw + straight draw', 'Nut flush draw', 'Open-ended straight draw'],
     strategy: {
-      inPosition: 'Semi-bluff (50-75% pot)',
-      outOfPosition: 'Check-call or check-raise'
+      inPosition: 'Semi-bluff (60-80% pot)',
+      outOfPosition: 'Check-raise or lead (50-70% pot)'
     }
   },
   'WeakDraw': {
     type: 'WeakDraw',
     examples: ['Gutshot', 'Small flush draw', 'Backdoor draws'],
     strategy: {
-      inPosition: 'Check behind',
-      outOfPosition: 'Check-fold'
+      inPosition: 'Semi-bluff small (40-60% pot)',
+      outOfPosition: 'Check-call if priced in'
     }
   },
   'Air': {
     type: 'Air',
     examples: ['No pair no draw', 'Bottom pair no draw'],
     strategy: {
-      inPosition: 'Check behind',
+      inPosition: 'Check behind or bluff dry boards',
       outOfPosition: 'Check-fold'
     }
   }
@@ -233,20 +233,46 @@ export function getTurnAdvice(
     const potOdds = betSize / (potSize + betSize)
     
     if (handStrength === 'Nuts' || handStrength === 'Strong') {
+      const raiseSize = Math.min(
+        position === 'IP' ? betSize * 3 : betSize * 2.5,
+        effectiveStack
+      )
       return {
         action: 'raise',
-        sizing: betSize * 2.5,
+        sizing: raiseSize,
         confidence: 'high',
-        reasoning: `Strong hand improved on turn, raising for value`
+        reasoning: `Strong hand improved on turn, ${position === 'IP' ? 'exploiting position' : 'protecting hand'}`
       }
     }
     
-    if (handStrength === 'StrongDraw' && potOdds < 0.25) {
+    if (handStrength === 'StrongDraw') {
+      // More aggressive with strong draws in position
+      if (position === 'IP' && potOdds < 0.35) {
+        const raiseSize = Math.min(betSize * 2.5, effectiveStack)
+        return {
+          action: 'raise',
+          sizing: raiseSize,
+          confidence: 'medium',
+          reasoning: 'Semi-bluff raising with strong draw in position'
+        }
+      }
+      
+      if (potOdds < 0.25) {
+        return {
+          action: 'call',
+          sizing: betSize,
+          confidence: 'high',
+          reasoning: 'Calling with strong draw and good pot odds'
+        }
+      }
+    }
+    
+    if (handStrength === 'WeakDraw' && position === 'IP' && potOdds < 0.2) {
       return {
         action: 'call',
         sizing: betSize,
-        confidence: 'high',
-        reasoning: `Strong draw with good pot odds`
+        confidence: 'medium',
+        reasoning: 'Floating with weak draw in position, good implied odds'
       }
     }
     
@@ -255,7 +281,7 @@ export function getTurnAdvice(
         action: 'call',
         sizing: betSize,
         confidence: 'medium',
-        reasoning: `Medium strength hand, calling with position`
+        reasoning: 'Calling with medium strength hand in position vs small bet'
       }
     }
     
@@ -263,27 +289,37 @@ export function getTurnAdvice(
       action: 'fold',
       sizing: 0,
       confidence: 'high',
-      reasoning: `Too weak to continue against turn aggression`
+      reasoning: 'Too weak to continue against turn aggression'
     }
   }
   
   // Betting as aggressor
   if (handStrength === 'Nuts' || handStrength === 'Strong') {
-    const sizing = position === 'IP' ? 0.75 * potSize : 0.66 * potSize
+    const sizing = position === 'IP' ? 0.8 * potSize : 0.7 * potSize
     return {
       action: 'bet',
-      sizing,
+      sizing: Math.min(sizing, effectiveStack),
       confidence: 'high',
-      reasoning: `Value betting strong hand on turn`
+      reasoning: `Value betting strong hand on turn ${position === 'IP' ? 'in position' : 'out of position'}`
     }
   }
   
-  if (handStrength === 'StrongDraw' && position === 'IP') {
+  if (handStrength === 'StrongDraw') {
+    const sizing = position === 'IP' ? 0.7 * potSize : 0.6 * potSize
     return {
       action: 'bet',
-      sizing: 0.66 * potSize,
+      sizing: Math.min(sizing, effectiveStack),
       confidence: 'medium',
-      reasoning: `Semi-bluffing strong draw in position`
+      reasoning: `Semi-bluffing strong draw ${position === 'IP' ? 'in position' : 'out of position'}`
+    }
+  }
+  
+  if (handStrength === 'WeakDraw' && position === 'IP') {
+    return {
+      action: 'bet',
+      sizing: 0.4 * potSize,
+      confidence: 'low',
+      reasoning: 'Small semi-bluff with weak draw in position'
     }
   }
   
@@ -292,7 +328,7 @@ export function getTurnAdvice(
       action: 'bet',
       sizing: 0.4 * potSize,
       confidence: 'medium',
-      reasoning: `Small value bet with medium strength hand`
+      reasoning: 'Small value bet with medium strength hand in position'
     }
   }
   

@@ -53,18 +53,24 @@ export async function getPlayerHistories(client: any, playerNames: string[]) {
 
 export async function updatePlayerStats(client: any, player: any, update: PlayerUpdate): Promise<PlayerStats> {
   const handInfo = update.handInfo
+  
+  // Initialize or increment VPIP/PFR counts
+  const vpipCount = (player.vpip_count || 0) + (handInfo.vpipAction ? 1 : 0)
+  const pfrCount = (player.pfr_count || 0) + (handInfo.pfrAction ? 1 : 0)
+  
   const newStats: PlayerStats = {
     total_hands: player.total_hands + 1,
     showdown_hands: player.showdown_hands + (handInfo.wentToShowdown ? 1 : 0),
     hands_won: player.hands_won + (handInfo.result === 'win' ? 1 : 0),
     aggression_factor: player.aggression_factor,
-    vpip_percentage: 0,
-    pfr_percentage: 0,
+    vpip_count: vpipCount,
+    pfr_count: pfrCount,
+    vpip_percentage: (vpipCount / (player.total_hands + 1)) * 100,
+    pfr_percentage: (pfrCount / (player.total_hands + 1)) * 100,
     showdown_hands_history: [...player.showdown_hands_history],
     betting_patterns: { ...player.betting_patterns },
     position_tendencies: { ...player.position_tendencies },
     last_seen_at: new Date().toISOString(),
-    bb_per_100_hands: player.bb_per_100_hands || 0,
     total_bluffs: player.total_bluffs + (handInfo.isBluff ? 1 : 0),
     successful_bluffs: player.successful_bluffs + (handInfo.isBluff && handInfo.result === 'win' ? 1 : 0),
     check_raise_attempts: player.check_raise_attempts + (handInfo.action === 'raise' && handInfo.lastAction === 'check' ? 1 : 0),
@@ -75,23 +81,6 @@ export async function updatePlayerStats(client: any, player: any, update: Player
     half_pot_success: player.half_pot_success + (handInfo.betSizeType === 'half_pot' && handInfo.result === 'win' ? 1 : 0),
     full_pot_bets: player.full_pot_bets + (handInfo.betSizeType === 'full_pot' ? 1 : 0),
     full_pot_success: player.full_pot_success + (handInfo.betSizeType === 'full_pot' && handInfo.result === 'win' ? 1 : 0)
-  }
-
-  // Update VPIP and PFR percentages
-  const totalVPIP = (player.vpip_percentage * player.total_hands + (handInfo.vpipAction ? 1 : 0))
-  const totalPFR = (player.pfr_percentage * player.total_hands + (handInfo.pfrAction ? 1 : 0))
-  newStats.vpip_percentage = totalVPIP / newStats.total_hands
-  newStats.pfr_percentage = totalPFR / newStats.total_hands
-
-  // Update showdown history if applicable
-  if (handInfo.wentToShowdown && handInfo.holeCards) {
-    newStats.showdown_hands_history.push({
-      holeCards: handInfo.holeCards,
-      position: handInfo.position,
-      result: handInfo.result,
-      profitLoss: handInfo.profitLoss,
-      timestamp: new Date().toISOString()
-    })
   }
 
   // Update position tendencies
@@ -108,6 +97,17 @@ export async function updatePlayerStats(client: any, player: any, update: Player
   if (handInfo.vpipAction) pos.vpip++
   if (handInfo.pfrAction) pos.pfr++
   if (handInfo.result === 'win') pos.won++
+
+  // Update showdown history if applicable
+  if (handInfo.wentToShowdown && handInfo.holeCards) {
+    newStats.showdown_hands_history.push({
+      holeCards: handInfo.holeCards,
+      position: handInfo.position,
+      result: handInfo.result,
+      profitLoss: handInfo.profitLoss,
+      timestamp: new Date().toISOString()
+    })
+  }
 
   // Update betting patterns with new metrics
   const actionKey = `${handInfo.position}_${handInfo.action}_${handInfo.betSizeType || 'unknown'}`

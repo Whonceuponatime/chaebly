@@ -7,6 +7,8 @@ CREATE TABLE mendez_player_history (
     showdown_hands INT DEFAULT 0,
     hands_won INT DEFAULT 0,
     aggression_factor FLOAT DEFAULT 0,
+    vpip_count INT DEFAULT 0,
+    pfr_count INT DEFAULT 0,
     vpip_percentage FLOAT DEFAULT 0,
     pfr_percentage FLOAT DEFAULT 0,
     showdown_hands_history JSONB[] DEFAULT ARRAY[]::JSONB[],

@@ -21,6 +21,16 @@ async function retryOperation<T>(operation: () => Promise<T>, retries = MAX_RETR
   }
 }
 
+// Add type for GPT analysis result
+interface GPTAnalysisResult {
+  action: string | null
+  reasoning: string | null
+  confidence?: string
+  adjustmentReason?: string
+  gtoContext?: string
+  reliablePlayerStats?: boolean
+}
+
 export default defineEventHandler(async (event) => {
   try {
     const client = await serverSupabaseServiceRole(event) as SupabaseClient<Database>
@@ -56,7 +66,13 @@ export default defineEventHandler(async (event) => {
     const potOdds = (actionData.to_call_bb / (actionData.pot_size_bb + actionData.to_call_bb)) * 100
 
     // Get ChatGPT analysis
-    const chatGPTAnalysis = await getGPTAnalysis(actionData, playerHistories)
+    let chatGPTAnalysis: GPTAnalysisResult = { action: null, reasoning: null }
+    try {
+      chatGPTAnalysis = await getGPTAnalysis(actionData, playerHistories)
+    } catch (gptError) {
+      console.error('GPT Analysis failed:', gptError)
+      // Continue with the request even if GPT fails
+    }
 
     // Insert action data with retry logic
     const { data: insertedData, error: insertError } = await retryOperation(async () => {
@@ -70,29 +86,32 @@ export default defineEventHandler(async (event) => {
         timestamp: action.timestamp || new Date().toISOString()
       })) || []
 
+      // Prepare insert data with correct types
+      const insertData = {
+        hand_id: actionData.hand_id,
+        street: actionData.street,
+        players: actionData.players,
+        hero_position: actionData.hero_position,
+        hero_cards: actionData.hero_cards,
+        board_cards: actionData.board_cards || null,
+        pot_size_bb: actionData.pot_size_bb,
+        to_call_bb: actionData.to_call_bb,
+        current_bet_bb: actionData.current_bet_bb,
+        active_players: actionData.active_players,
+        action_on: actionData.action_on,
+        last_action: actionData.last_action || null,
+        last_bet_size_bb: actionData.last_bet_size_bb || null,
+        effective_stack: actionData.effective_stack || 0,
+        gpt_decision: chatGPTAnalysis.action || 'fold', // Default to 'fold' instead of null
+        decision_reasoning: chatGPTAnalysis.reasoning || 'GPT analysis failed',
+        action_history: formattedActionHistory,
+        positions: actionData.positions || {},
+        player_stacks: actionData.playerStacks || {}
+      } as const
+
       const result = await client
         .from('mendez_games')
-        .insert({
-          hand_id: actionData.hand_id,
-          street: actionData.street,
-          players: actionData.players,
-          hero_position: actionData.hero_position,
-          hero_cards: actionData.hero_cards,
-          board_cards: actionData.board_cards,
-          pot_size_bb: actionData.pot_size_bb,
-          to_call_bb: actionData.to_call_bb,
-          current_bet_bb: actionData.current_bet_bb,
-          active_players: actionData.active_players,
-          action_on: actionData.action_on,
-          last_action: actionData.last_action,
-          last_bet_size_bb: actionData.last_bet_size_bb,
-          effective_stack: actionData.effective_stack,
-          gpt_decision: chatGPTAnalysis.action,
-          decision_reasoning: chatGPTAnalysis.reasoning,
-          action_history: formattedActionHistory,
-          positions: actionData.positions || {},
-          player_stacks: actionData.playerStacks || {}
-        } as Database['public']['Tables']['mendez_games']['Insert'])
+        .insert(insertData)
         .select()
         .single()
       return result
@@ -152,7 +171,6 @@ export default defineEventHandler(async (event) => {
             betting_patterns: {},
             position_tendencies: {},
             last_seen_at: new Date().toISOString(),
-            bb_per_100_hands: 0,
             total_bluffs: 0,
             successful_bluffs: 0,
             check_raise_attempts: 0,
@@ -174,38 +192,18 @@ export default defineEventHandler(async (event) => {
       })
     )
 
-    // Combine all recommendations
-    const finalDecision = {
-      action: chatGPTAnalysis.action,
-      confidence: chatGPTAnalysis.confidence,
-      reasoning: chatGPTAnalysis.reasoning,
-      playerInsights: playerHistories.map((h: PlayerHistory) => ({
-        player: h.player_name,
-        style: h.vpip_percentage > 30 ? 
-          (h.aggression_factor > 2 ? 'LAG' : 'LP') : 
-          (h.aggression_factor > 2 ? 'TAG' : 'TP'),
-        tendencies: h.vpip_percentage > 40 ? ['plays too many hands'] :
-                   h.aggression_factor < 1 ? ['calls too much'] :
-                   h.aggression_factor > 3 ? ['over-aggressive'] :
-                   ['balanced']
-      })),
-      potOdds: `${potOdds.toFixed(1)}%`,
-      potSize: `${actionData.pot_size_bb}BB`,
-      toCall: `${actionData.to_call_bb}BB`,
-      chatGPTAnalysis: {
-        suggestion: chatGPTAnalysis.action,
-        reasoning: chatGPTAnalysis.reasoning,
-        adjustmentReason: chatGPTAnalysis.adjustmentReason
-      },
-      execute: true
-    }
-
+    // Return response
     return { 
       success: true, 
       handId: (insertedData as any).hand_id,
       street: (insertedData as any).street,
-      decision: finalDecision,
-      message: 'Decision computed successfully'
+      decision: {
+        action: chatGPTAnalysis.action || 'fold',
+        confidence: 'low',
+        reasoning: chatGPTAnalysis.reasoning || 'GPT analysis failed',
+        execute: true
+      },
+      message: chatGPTAnalysis.action ? 'Decision computed successfully' : 'Decision defaulted to fold due to GPT error'
     }
   } catch (error: any) {
     console.error('Server error:', error)
