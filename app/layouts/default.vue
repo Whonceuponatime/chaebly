@@ -10,6 +10,7 @@
 
         <div class="nav-links" :class="{ 'mobile-open': isMobileMenuOpen }">
           <NuxtLink to="/products" @click="isMobileMenuOpen = false">상품</NuxtLink>
+          <NuxtLink to="/photography" @click="isMobileMenuOpen = false">포토그래피</NuxtLink>
           <template v-if="user && user.email === 'taebaek@gmail.com'">
             <NuxtLink to="/wishlist" @click="isMobileMenuOpen = false">위시리스트</NuxtLink>
             <NuxtLink to="/mypage" @click="isMobileMenuOpen = false">마이페이지</NuxtLink>

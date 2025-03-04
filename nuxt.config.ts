@@ -12,11 +12,13 @@ export default defineNuxtConfig({
 
   // Supabase configuration
   supabase: {
+    url: process.env.SUPABASE_URL,
+    key: process.env.SUPABASE_KEY,
     redirectOptions: {
       login: '/auth/login',
       callback: '/confirm',
-      exclude: ['/auth/register', '/auth/reset-password'],
-    }
+      exclude: ['/*'],
+    },
   },
 
   // Env variables - https://nuxt.com/docs/getting-started/configuration#environment-variables-and-private-tokens
